@@ -18,6 +18,7 @@ import (
 // b) otherwise it waits for a backoff time, with respect to the backoff options,
 // and then retry the function.
 func Do(ctx context.Context, f func() bool, options Options) (bool, error) {
+	var backoff time.Duration
 	var rand1 *rand.Rand
 	var timer *time.Timer
 	for attemptCount := 1; ; attemptCount++ {
@@ -30,7 +31,7 @@ func Do(ctx context.Context, f func() bool, options Options) (bool, error) {
 		if attemptCount == options.MaxNumberOfAttempts {
 			return false, nil
 		}
-		setTimer(&options, &rand1, &timer)
+		updateBackoff(&backoff, &options, &rand1, &timer)
 		select {
 		case <-timer.C:
 		case <-ctx.Done():
@@ -40,20 +41,19 @@ func Do(ctx context.Context, f func() bool, options Options) (bool, error) {
 	}
 }
 
-func setTimer(options *Options, rand1 **rand.Rand, timer **time.Timer) {
-	var backoff time.Duration
+func updateBackoff(backoff *time.Duration, options *Options, rand1 **rand.Rand, timer **time.Timer) {
 	if *timer == nil {
-		backoff = options.MinBackoff
+		*backoff = options.MinBackoff
 	} else {
-		backoff = time.Duration(float64(backoff) * options.BackoffFactor)
-		if backoff > options.MaxBackoff {
-			backoff = options.MaxBackoff
+		*backoff = time.Duration(float64(*backoff) * options.BackoffFactor)
+		if *backoff > options.MaxBackoff {
+			*backoff = options.MaxBackoff
 		}
 	}
 	if *timer == nil && options.MaxBackoffJitter > 0 {
 		*rand1 = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
-	backoffWithJitter := makeBackoffWithJitter(backoff, options.MaxBackoffJitter, *rand1)
+	backoffWithJitter := makeBackoffWithJitter(*backoff, options.MaxBackoffJitter, *rand1)
 	if *timer == nil {
 		*timer = time.NewTimer(backoffWithJitter)
 	} else {
