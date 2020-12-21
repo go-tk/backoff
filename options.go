@@ -13,30 +13,45 @@ import "time"
 //  backoff_jitter = random(-MAX_BACKOFF_JITTER, MAX_BACKOFF_JITTER)
 //  backoff_with_jitter = backoff * (1 + backoff_jitter)
 type Options struct {
-	MinBackoff          time.Duration
-	MaxBackoff          time.Duration
-	BackoffFactor       float64
-	MaxBackoffJitter    float64
+	// Value < 1 for MinBackoff is equivalent to DefaultMinBackoff.
+	MinBackoff time.Duration
+
+	// Value < 1 for MaxBackoff is equivalent to DefaultMaxBackoff.
+	MaxBackoff time.Duration
+
+	// Value < 1 for BackoffFactor is equivalent to DefaultBackoffFactor.
+	BackoffFactor float64
+
+	// Value < 1 for MaxBackoffJitter indicates no backoff jitter.
+	// Value == 0 for MaxBackoffJitter is equivalent to DefaultMaxBackoffJitter.
+	MaxBackoffJitter float64
+
+	// Value < 1 for MaxNumberOfAttempts indicates the number of attempts is unlimited.
+	// value == 0 for MaxNumberOfAttempts is equivalent to DefaultMaxNumberOfAttempts.
 	MaxNumberOfAttempts int
 }
 
 func (o *Options) normalize() {
-	if o.MinBackoff <= 0 {
+	if o.MinBackoff < 1 {
 		o.MinBackoff = DefaultMinBackoff
 	}
-	if o.MaxBackoff <= 0 {
+	if o.MaxBackoff < 1 {
 		o.MaxBackoff = DefaultMaxBackoff
 	}
 	if o.MaxBackoff < o.MinBackoff {
 		o.MaxBackoff = o.MinBackoff
 	}
-	if o.BackoffFactor <= 0 {
+	if o.BackoffFactor < 1 {
 		o.BackoffFactor = DefaultBackoffFactor
 	}
-	if o.MaxBackoffJitter <= 0 {
+	if o.MaxBackoffJitter < 0 {
+		o.MaxBackoffJitter = 0
+	} else if o.MaxBackoffJitter == 0 {
 		o.MaxBackoffJitter = DefaultMaxBackoffJitter
 	}
-	if o.MaxNumberOfAttempts == 0 {
+	if o.MaxNumberOfAttempts < 0 {
+		o.MaxNumberOfAttempts = 0
+	} else if o.MaxNumberOfAttempts == 0 {
 		o.MaxNumberOfAttempts = DefaultMaxNumberOfAttempts
 	}
 }

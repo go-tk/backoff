@@ -12,8 +12,8 @@ import (
 //
 // When the given function returns false,
 //
-// a) if option MaxNumberOfAttempts is positive (default: zero) and the number of
-// attempts reaches the value of the option, it returns false as well.
+// a) if option MaxNumberOfAttempts is set to positive and the number of attempts
+// reaches the value of the option, it returns false as well.
 //
 // b) otherwise it waits for a backoff time, with respect to the backoff options,
 // and then retry the function.
