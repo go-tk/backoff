@@ -18,9 +18,7 @@ import (
 // b) otherwise it waits for a backoff time, with respect to the backoff options,
 // and then retry the function.
 func Do(ctx context.Context, f func() (bool, error), options Options) (bool, error) {
-	var backoff time.Duration
-	var rand1 *rand.Rand
-	var timer *time.Timer
+	var backoffTimer timer
 	for attemptCount := 1; ; attemptCount++ {
 		ok, err := f()
 		if err != nil {
@@ -35,41 +33,55 @@ func Do(ctx context.Context, f func() (bool, error), options Options) (bool, err
 		if attemptCount == options.MaxNumberOfAttempts {
 			return false, nil
 		}
-		updateBackoff(&backoff, &options, &rand1, &timer)
+		backoffTimer.Set(
+			options.MinBackoff,
+			options.MaxBackoff,
+			options.BackoffFactor,
+			options.MaxBackoffJitter,
+		)
 		select {
-		case <-timer.C:
+		case <-backoffTimer.C():
 		case <-ctx.Done():
-			timer.Stop()
+			backoffTimer.Stop()
 			return false, ctx.Err()
 		}
 	}
 }
 
-func updateBackoff(backoff *time.Duration, options *Options, rand1 **rand.Rand, timer **time.Timer) {
-	if *timer == nil {
-		*backoff = options.MinBackoff
+type timer struct {
+	t     *time.Timer
+	rand  *rand.Rand
+	delay time.Duration
+}
+
+func (t *timer) Set(minDelay, maxDelay time.Duration, delayFactor, maxDelayJitter float64) {
+	if t.t == nil {
+		t.delay = minDelay
 	} else {
-		*backoff = time.Duration(float64(*backoff) * options.BackoffFactor)
-		if *backoff > options.MaxBackoff {
-			*backoff = options.MaxBackoff
+		t.delay = time.Duration(float64(t.delay) * delayFactor)
+		if t.delay > maxDelay {
+			t.delay = maxDelay
 		}
 	}
-	if *timer == nil && options.MaxBackoffJitter > 0 {
-		*rand1 = rand.New(rand.NewSource(time.Now().UnixNano()))
+	if t.t == nil && maxDelayJitter > 0 {
+		t.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
-	backoffWithJitter := makeBackoffWithJitter(*backoff, options.MaxBackoffJitter, *rand1)
-	if *timer == nil {
-		*timer = time.NewTimer(backoffWithJitter)
+	delayWithJitter := t.delayWithJitter(maxDelayJitter)
+	if t.t == nil {
+		t.t = time.NewTimer(delayWithJitter)
 	} else {
-		(*timer).Reset(backoffWithJitter)
+		t.t.Reset(delayWithJitter)
 	}
 }
 
-func makeBackoffWithJitter(backoff time.Duration, maxBackoffJitter float64, rand1 *rand.Rand) time.Duration {
-	if maxBackoffJitter == 0 {
-		return backoff
+func (t *timer) delayWithJitter(maxDelayJitter float64) time.Duration {
+	if maxDelayJitter == 0 {
+		return t.delay
 	}
-	backoffJitter := maxBackoffJitter * (2*rand1.Float64() - 1)
-	backoffWithJitter := backoff + time.Duration(float64(backoff)*backoffJitter)
-	return backoffWithJitter
+	delayJitter := maxDelayJitter * (2*t.rand.Float64() - 1)
+	delayWithJitter := t.delay + time.Duration(float64(t.delay)*delayJitter)
+	return delayWithJitter
 }
+
+func (t *timer) C() <-chan time.Time { return t.t.C }
+func (t *timer) Stop()               { t.t.Stop() }
