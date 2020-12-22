@@ -17,12 +17,16 @@ import (
 //
 // b) otherwise it waits for a backoff time, with respect to the backoff options,
 // and then retry the function.
-func Do(ctx context.Context, f func() bool, options Options) (bool, error) {
+func Do(ctx context.Context, f func() (bool, error), options Options) (bool, error) {
 	var backoff time.Duration
 	var rand1 *rand.Rand
 	var timer *time.Timer
 	for attemptCount := 1; ; attemptCount++ {
-		if f() {
+		ok, err := f()
+		if err != nil {
+			return ok, err
+		}
+		if ok {
 			return true, nil
 		}
 		if attemptCount == 1 {

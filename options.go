@@ -62,5 +62,5 @@ var (
 	DefaultMaxBackoff          time.Duration = 100 * time.Second
 	DefaultBackoffFactor       float64       = 2
 	DefaultMaxBackoffJitter    float64       = 1
-	DefaultMaxNumberOfAttempts int
+	DefaultMaxNumberOfAttempts int           // unlimited
 )

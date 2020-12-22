@@ -2,6 +2,7 @@ package try_test
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 func TestDo(t *testing.T) {
 	type Input struct {
 		Ctx     context.Context
-		F       func() bool
+		F       func() (bool, error)
 		Options Options
 	}
 	type Output struct {
@@ -36,7 +37,7 @@ func TestDo(t *testing.T) {
 			},
 			Input: Input{
 				Ctx: context.Background(),
-				F:   func() bool { return false },
+				F:   func() (bool, error) { return false, nil },
 				Options: Options{
 					MinBackoff:          10 * time.Millisecond,
 					MaxBackoffJitter:    -1,
@@ -56,7 +57,7 @@ func TestDo(t *testing.T) {
 			},
 			Input: Input{
 				Ctx: context.Background(),
-				F:   func() bool { return false },
+				F:   func() (bool, error) { return false, nil },
 				Options: Options{
 					MinBackoff:          10 * time.Millisecond,
 					MaxBackoff:          20 * time.Millisecond,
@@ -78,7 +79,7 @@ func TestDo(t *testing.T) {
 			},
 			Input: Input{
 				Ctx: context.Background(),
-				F:   func() bool { return false },
+				F:   func() (bool, error) { return false, nil },
 				Options: Options{
 					MinBackoff:          10 * time.Millisecond,
 					MaxBackoff:          30 * time.Millisecond,
@@ -100,7 +101,7 @@ func TestDo(t *testing.T) {
 			},
 			Input: Input{
 				Ctx: context.Background(),
-				F:   func() bool { return false },
+				F:   func() (bool, error) { return false, nil },
 				Options: Options{
 					MinBackoff:          10 * time.Millisecond,
 					MaxBackoff:          20 * time.Millisecond,
@@ -121,7 +122,7 @@ func TestDo(t *testing.T) {
 			},
 			Input: Input{
 				Ctx: context.Background(),
-				F:   func() bool { return false },
+				F:   func() (bool, error) { return false, nil },
 				Options: Options{
 					MinBackoff:          10 * time.Millisecond,
 					MaxBackoff:          20 * time.Millisecond,
@@ -140,10 +141,21 @@ func TestDo(t *testing.T) {
 			Then: "should returns true as well",
 			Input: Input{
 				Ctx: context.Background(),
-				F:   func() bool { return true },
+				F:   func() (bool, error) { return true, nil },
 			},
 			Output: Output{
 				OK: true,
+			},
+		},
+		{
+			When: "f returns error",
+			Then: "should returns error as well",
+			Input: Input{
+				Ctx: context.Background(),
+				F:   func() (bool, error) { return false, errors.New("my error") },
+			},
+			Output: Output{
+				ErrStr: "my error",
 			},
 		},
 		{
@@ -155,7 +167,7 @@ func TestDo(t *testing.T) {
 				tc.Input.Ctx = ctx
 			},
 			Input: Input{
-				F: func() bool { return false },
+				F: func() (bool, error) { return false, nil },
 			},
 			Output: Output{
 				ErrStr: context.DeadlineExceeded.Error(),
