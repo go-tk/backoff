@@ -177,6 +177,8 @@ func TestDo(t *testing.T) {
 	for i := range testCases {
 		tc := &testCases[i]
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+
 			t.Logf("\nGIVEN: %s\nWHEN: %s\nTHEN: %s", tc.Given, tc.When, tc.Then)
 
 			if f := tc.Setup; f != nil {
