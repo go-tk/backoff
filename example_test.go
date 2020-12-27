@@ -3,17 +3,20 @@ package try_test
 import (
 	"context"
 	"fmt"
-	"os"
+	"net"
+	"net/http"
 	"time"
 
 	. "github.com/go-tk/try"
 )
 
 func ExampleDo() {
-	// Wait for file creation.
+	var resp *http.Response
 	ok, err := Do(context.Background(), func() (bool, error) {
-		if _, err := os.Stat("foo.txt"); err != nil {
-			if os.IsNotExist(err) {
+		var err error
+		resp, err = http.Get("http://example.com")
+		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Temporary() {
 				return false, nil // retry
 			}
 			return false, err // error
@@ -28,7 +31,12 @@ func ExampleDo() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(ok)
+	if !ok {
+		// MaxNumberOfAttempts reached
+		return
+	}
+	resp.Body.Close()
+	fmt.Println(resp.StatusCode)
 	// Output:
-	// false
+	// 200
 }
