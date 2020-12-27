@@ -31,7 +31,7 @@ type Options struct {
 	MaxNumberOfAttempts int
 }
 
-func (o *Options) normalize() {
+func (o *Options) sanitize() {
 	if o.MinBackoff < 1 {
 		o.MinBackoff = DefaultMinBackoff
 	}

@@ -28,7 +28,7 @@ func Do(ctx context.Context, f func() (bool, error), options Options) (bool, err
 			return true, nil
 		}
 		if attemptCount == 1 {
-			options.normalize()
+			options.sanitize()
 		}
 		if attemptCount == options.MaxNumberOfAttempts {
 			return false, nil

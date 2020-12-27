@@ -1,13 +1,14 @@
-package try
+package try_test
 
 import (
 	"strconv"
 	"testing"
 
+	. "github.com/go-tk/try"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOptions_normalize(t *testing.T) {
+func TestOptions_Sanitize(t *testing.T) {
 	type State = Options
 	type TestCase struct {
 		Given, When, Then string
@@ -113,7 +114,7 @@ func TestOptions_normalize(t *testing.T) {
 				f(tc)
 			}
 
-			o.normalize()
+			o.Sanitize()
 
 			if f := tc.Teardown; f != nil {
 				f(tc)
