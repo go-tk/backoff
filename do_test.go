@@ -138,7 +138,7 @@ func TestDo(t *testing.T) {
 		},
 		{
 			When: "f returns true",
-			Then: "should returns true as well",
+			Then: "should return true as well",
 			Input: Input{
 				Ctx: context.Background(),
 				F:   func() (bool, error) { return true, nil },
@@ -149,7 +149,7 @@ func TestDo(t *testing.T) {
 		},
 		{
 			When: "f returns error",
-			Then: "should returns error as well",
+			Then: "should return error as well",
 			Input: Input{
 				Ctx: context.Background(),
 				F:   func() (bool, error) { return false, errors.New("my error") },
@@ -160,7 +160,7 @@ func TestDo(t *testing.T) {
 		},
 		{
 			When: "context is timed out",
-			Then: "should returns error",
+			Then: "should return error",
 			Setup: func(tc *TestCase) {
 				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Millisecond)
 				_ = cancel
@@ -192,12 +192,11 @@ func TestDo(t *testing.T) {
 			if err != nil {
 				output.ErrStr = err.Error()
 			}
+			assert.Equal(t, tc.Output, output)
 
 			if f := tc.Teardown; f != nil {
 				f(tc)
 			}
-
-			assert.Equal(t, tc.Output, output)
 		})
 	}
 }

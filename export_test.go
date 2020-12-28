@@ -1,5 +1,3 @@
 package try
 
-func (o *Options) Sanitize() {
-	o.sanitize()
-}
+func (o *Options) Sanitize() { o.sanitize() }

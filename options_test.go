@@ -19,7 +19,7 @@ func TestOptions_Sanitize(t *testing.T) {
 	}
 	testCases := []TestCase{
 		{
-			Then: "should change options to default",
+			Then: "should overwrite options to default",
 			State: State{
 				MinBackoff:          DefaultMinBackoff,
 				MaxBackoff:          DefaultMaxBackoff,
@@ -30,7 +30,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		},
 		{
 			Given: "negative option MinBackoff, MaxBackoff, BackoffFactor",
-			Then:  "should change options to default",
+			Then:  "should overwrite options to default",
 			Setup: func(tc *TestCase) {
 				tc.o.MinBackoff = -1
 				tc.o.MaxBackoff = -2
@@ -46,7 +46,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		},
 		{
 			Given: "options with specified values",
-			Then:  "should not change options",
+			Then:  "should not overwrite options",
 			Setup: func(tc *TestCase) {
 				*tc.o = tc.State
 			},
@@ -60,7 +60,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		},
 		{
 			Given: "option MaxBackoff less than option MinBackoff",
-			Then:  "should change option MaxBackoff to MinBackoff",
+			Then:  "should overwrite option MaxBackoff to MinBackoff",
 			Setup: func(tc *TestCase) {
 				tc.o.MinBackoff = 2
 				tc.o.MaxBackoff = 1
@@ -75,7 +75,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		},
 		{
 			Given: "negative option MaxBackoffJitter",
-			Then:  "should change option MaxBackoffJitter to zero",
+			Then:  "should overwrite option MaxBackoffJitter to zero",
 			Setup: func(tc *TestCase) {
 				tc.o.MaxBackoffJitter = -100
 			},
@@ -88,7 +88,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		},
 		{
 			Given: "negative option MaxNumberOfAttempts",
-			Then:  "should change option MaxNumberOfAttempts to zero",
+			Then:  "should overwrite option MaxNumberOfAttempts to zero",
 			Setup: func(tc *TestCase) {
 				tc.o.MaxNumberOfAttempts = -100
 			},

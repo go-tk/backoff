@@ -16,7 +16,7 @@ import (
 // number of attempts reaches the value of the option, it returns false as well.
 //
 // b) otherwise it waits for a backoff time, with respect to the backoff options,
-// and then retry the function.
+// and then retries the function.
 func Do(ctx context.Context, f func() (bool, error), options Options) (bool, error) {
 	var backoffTimer timer
 	for attemptCount := 1; ; attemptCount++ {
