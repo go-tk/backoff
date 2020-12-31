@@ -25,12 +25,12 @@ func main() {
         ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
         _ = cancel
         backoff := backoff.New(backoff.Options{
-                MinDelay:            100 * time.Millisecond,        // default
-                MaxDelay:            100 * time.Second,             // default
-                DelayFactor:         2,                             // default
-                MaxDelayJitter:      1,                             // default
+                MinDelay:            100 * time.Millisecond,
+                MaxDelay:            100 * time.Second,
+                DelayFactor:         2,
+                MaxDelayJitter:      1,
                 DelayFunc:           backoff.DelayWithContext(ctx),
-                MaxNumberOfAttempts: 100,                           // default
+                MaxNumberOfAttempts: 100,
         })
         req, err := http.NewRequestWithContext(ctx, "GET", "http://example.com/", nil)
         if err != nil {
@@ -47,7 +47,7 @@ func main() {
                 }
                 resp.Body.Close()
                 if resp.StatusCode/100 == 5 {
-                        err := fmt.Errorf("http server failed; httpStatusCode=%v", resp.StatusCode)
+                        err := fmt.Errorf("http server error; httpStatusCode=%v", resp.StatusCode)
                         if err2 := backoff.Do(); err2 != nil {
                                 log.Printf("failed to back off; err=%q", err2)
                                 log.Fatal(err)

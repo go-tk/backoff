@@ -36,7 +36,7 @@ func ExampleBackoff() {
 		}
 		resp.Body.Close()
 		if resp.StatusCode/100 == 5 {
-			err := fmt.Errorf("http server failed; httpStatusCode=%v", resp.StatusCode)
+			err := fmt.Errorf("http server error; httpStatusCode=%v", resp.StatusCode)
 			if err2 := backoff.Do(); err2 != nil {
 				log.Printf("failed to back off; err=%q", err2)
 				log.Fatal(err)
