@@ -25,7 +25,7 @@ type Options struct {
 	// Value < 1 is equivalent to 2.
 	DelayFactor float64
 
-	// Value < 0 indicates no delay jitter.
+	// Value < 0 is equivalent to 0.
 	// Value == 0 is equivalent to 1.
 	MaxDelayJitter float64
 
@@ -36,7 +36,7 @@ type Options struct {
 	//  }
 	DelayFunc DelayFunc
 
-	// Value < 0 indicates no attempt to back off.
+	// Value < 0 is equivalent to 0.
 	// value == 0 is equivalent to 100.
 	MaxNumberOfAttempts int
 }

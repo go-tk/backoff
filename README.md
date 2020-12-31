@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/go-tk/backoff.svg?branch=master)](https://travis-ci.org/github/go-tk/backoff)
 [![Coverage Status](https://codecov.io/gh/go-tk/backoff/branch/master/graph/badge.svg)](https://codecov.io/gh/go-tk/backoff)
 
-Exponential backoff algorithm with jitter
+Exponential backoff algorithm with randomized jitter
 
 ## Example
 
