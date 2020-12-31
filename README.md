@@ -1,6 +1,6 @@
 # backoff
 
-[![GoDev](https://img.shields.io/static/v1?label=godev&message=reference&color=00add8)](https://pkg.go.dev/github.com/go-tk/backoff)
+[![GoDev](https://pkg.go.dev/badge/golang.org/x/pkgsite.svg)](https://pkg.go.dev/github.com/go-tk/backoff)
 [![Build Status](https://travis-ci.org/go-tk/backoff.svg?branch=master)](https://travis-ci.org/github/go-tk/backoff)
 [![Coverage Status](https://codecov.io/gh/go-tk/backoff/branch/master/graph/badge.svg)](https://codecov.io/gh/go-tk/backoff)
 
@@ -25,12 +25,12 @@ func main() {
         ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
         _ = cancel
         backoff := backoff.New(backoff.Options{
-                MinDelay:            100 * time.Millisecond,
-                MaxDelay:            100 * time.Second,
-                DelayFactor:         2,
-                MaxDelayJitter:      1,
+                MinDelay:            100 * time.Millisecond,        // default
+                MaxDelay:            100 * time.Second,             // default
+                DelayFactor:         2,                             // default
+                MaxDelayJitter:      1,                             // default
                 DelayFunc:           backoff.DelayWithContext(ctx),
-                MaxNumberOfAttempts: 100,
+                MaxNumberOfAttempts: 100,                           // default
         })
         req, err := http.NewRequestWithContext(ctx, "GET", "http://example.com/", nil)
         if err != nil {
