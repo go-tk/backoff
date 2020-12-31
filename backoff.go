@@ -5,14 +5,14 @@ import (
 	"fmt"
 )
 
-// Backoff represents a instance of the exponential backoff algorithm.
+// Backoff represents an instance of the exponential backoff algorithm.
 type Backoff struct {
 	options      Options
 	attemptCount int
 	timer        timer
 }
 
-// New creates a instance of the exponential backoff algorithm with the
+// New creates an instance of the exponential backoff algorithm with the
 // given options.
 func New(options Options) *Backoff {
 	var b Backoff
