@@ -1,42 +1,51 @@
-package try_test
+package backoff_test
 
 import (
 	"context"
 	"fmt"
-	"net"
+	"log"
 	"net/http"
 	"time"
 
-	. "github.com/go-tk/try"
+	"github.com/go-tk/backoff"
 )
 
-func ExampleDo() {
-	var resp *http.Response
-	ok, err := Do(context.Background(), func() (bool, error) {
-		var err error
-		resp, err = http.Get("http://example.com")
-		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Temporary() {
-				return false, nil // retry
-			}
-			return false, err // error
-		}
-		return true, nil // succeed
-	}, Options{
-		MinBackoff:          100 * time.Millisecond,
-		MaxBackoff:          5 * time.Second,
-		BackoffFactor:       2,
-		MaxNumberOfAttempts: 3,
+func ExampleBackoff() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_ = cancel
+	backoff := backoff.New(backoff.Options{
+		MinDelay:            100 * time.Millisecond,
+		MaxDelay:            100 * time.Second,
+		DelayFactor:         2,
+		MaxDelayJitter:      1,
+		DelayFunc:           backoff.DelayWithContext(ctx),
+		MaxNumberOfAttempts: 100,
 	})
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://example.com/", nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	if !ok {
-		// MaxNumberOfAttempts reached
+	for {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			if err2 := backoff.Do(); err2 != nil {
+				log.Printf("failed to back off; err=%q", err2)
+				log.Fatal(err)
+			}
+			continue
+		}
+		resp.Body.Close()
+		if resp.StatusCode/100 == 5 {
+			err := fmt.Errorf("http server failed; httpStatusCode=%v", resp.StatusCode)
+			if err2 := backoff.Do(); err2 != nil {
+				log.Printf("failed to back off; err=%q", err2)
+				log.Fatal(err)
+			}
+			continue
+		}
+		fmt.Println(resp.StatusCode)
 		return
 	}
-	resp.Body.Close()
-	fmt.Println(resp.StatusCode)
 	// Output:
 	// 200
 }

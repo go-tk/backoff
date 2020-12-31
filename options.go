@@ -1,66 +1,88 @@
-package try
+package backoff
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
-// Options represents options for tries.
+// Options represents options for backoffs.
 //
-// The pseudo code for the backoff calculation:
-//  if backoff is not initialized
-//      backoff = MIN_BACKOFF
+// The pseudo code for the delay calculation:
+//  if delay is not initialized
+//      delay = MIN_DELAY
 //  else
-//      backoff = min(backoff * BACKOFF_FACTOR, MAX_BACKOFF)
+//      delay = min(delay * DELAY_FACTOR, MAX_DELAY)
 //
-//  backoff_jitter = random(-MAX_BACKOFF_JITTER, MAX_BACKOFF_JITTER)
-//  backoff_with_jitter = backoff * (1 + backoff_jitter)
+//  delay_jitter = random(-MAX_DELAY_JITTER, MAX_DELAY_JITTER)
+//  delay_with_jitter = delay * (1 + delay_jitter)
 type Options struct {
-	// Value < 1 for MinBackoff is equivalent to DefaultMinBackoff.
-	MinBackoff time.Duration
+	// Value < 1 is equivalent to 100ms.
+	MinDelay time.Duration
 
-	// Value < 1 for MaxBackoff is equivalent to DefaultMaxBackoff.
-	MaxBackoff time.Duration
+	// Value < 1 is equivalent to 100s.
+	MaxDelay time.Duration
 
-	// Value < 1 for BackoffFactor is equivalent to DefaultBackoffFactor.
-	BackoffFactor float64
+	// Value < 1 is equivalent to 2.
+	DelayFactor float64
 
-	// Value < 1 for MaxBackoffJitter indicates no backoff jitter.
-	// Value == 0 for MaxBackoffJitter is equivalent to DefaultMaxBackoffJitter.
-	MaxBackoffJitter float64
+	// Value < 0 indicates no delay jitter.
+	// Value == 0 is equivalent to 1.
+	MaxDelayJitter float64
 
-	// Value < 1 for MaxNumberOfAttempts indicates the number of attempts is unlimited.
-	// value == 0 for MaxNumberOfAttempts is equivalent to DefaultMaxNumberOfAttempts.
+	// Value nil is equivalent to:
+	//  func(event <-chan struct{}) error {
+	//      <-event
+	//      return nil
+	//  }
+	DelayFunc DelayFunc
+
+	// Value < 0 indicates no attempt to back off.
+	// value == 0 is equivalent to 100.
 	MaxNumberOfAttempts int
 }
 
 func (o *Options) sanitize() {
-	if o.MinBackoff < 1 {
-		o.MinBackoff = DefaultMinBackoff
+	if o.MinDelay < 1 {
+		o.MinDelay = 100 * time.Millisecond
 	}
-	if o.MaxBackoff < 1 {
-		o.MaxBackoff = DefaultMaxBackoff
+	if o.MaxDelay < 1 {
+		o.MaxDelay = 100 * time.Second
 	}
-	if o.MaxBackoff < o.MinBackoff {
-		o.MaxBackoff = o.MinBackoff
+	if o.MaxDelay < o.MinDelay {
+		o.MaxDelay = o.MinDelay
 	}
-	if o.BackoffFactor < 1 {
-		o.BackoffFactor = DefaultBackoffFactor
+	if o.DelayFactor < 1 {
+		o.DelayFactor = 2
 	}
-	if o.MaxBackoffJitter < 0 {
-		o.MaxBackoffJitter = 0
-	} else if o.MaxBackoffJitter == 0 {
-		o.MaxBackoffJitter = DefaultMaxBackoffJitter
+	if o.MaxDelayJitter < 0 {
+		o.MaxDelayJitter = 0
+	} else if o.MaxDelayJitter == 0 {
+		o.MaxDelayJitter = 1
+	}
+	if o.DelayFunc == nil {
+		o.DelayFunc = func(event <-chan struct{}) error {
+			<-event
+			return nil
+		}
 	}
 	if o.MaxNumberOfAttempts < 0 {
 		o.MaxNumberOfAttempts = 0
 	} else if o.MaxNumberOfAttempts == 0 {
-		o.MaxNumberOfAttempts = DefaultMaxNumberOfAttempts
+		o.MaxNumberOfAttempts = 100
 	}
 }
 
-// Default values for options.
-var (
-	DefaultMinBackoff          time.Duration = 100 * time.Millisecond
-	DefaultMaxBackoff          time.Duration = 100 * time.Second
-	DefaultBackoffFactor       float64       = 2
-	DefaultMaxBackoffJitter    float64       = 1
-	DefaultMaxNumberOfAttempts int           = 100
-)
+// DelayFunc is the type of the function delaying until the given event happens.
+type DelayFunc func(event <-chan struct{}) (err error)
+
+// DelayWithContext makes a DelayFunc with respect to the given ctx.
+func DelayWithContext(ctx context.Context) DelayFunc {
+	return func(event <-chan struct{}) error {
+		select {
+		case <-event:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}

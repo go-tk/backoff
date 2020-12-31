@@ -1,89 +1,109 @@
-package try_test
+package backoff_test
 
 import (
 	"strconv"
 	"testing"
+	"time"
 
-	. "github.com/go-tk/try"
+	. "github.com/go-tk/backoff"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOptions_Sanitize(t *testing.T) {
-	type State = Options
+	type State struct {
+		MinDelay            time.Duration
+		MaxDelay            time.Duration
+		DelayFactor         float64
+		MaxDelayJitter      float64
+		DelayFuncIsNil      bool
+		MaxNumberOfAttempts int
+	}
 	type TestCase struct {
 		Given, When, Then string
 		Setup, Teardown   func(*TestCase)
 		State             State
 
+		t *testing.T
 		o *Options
 	}
+	const (
+		defaultMinDelay            time.Duration = 100 * time.Millisecond
+		defaultMaxDelay            time.Duration = 100 * time.Second
+		defaultDelayFactor         float64       = 2
+		defaultMaxDelayJitter      float64       = 1
+		defaultMaxNumberOfAttempts               = 100
+	)
 	testCases := []TestCase{
 		{
 			Then: "should overwrite options to default",
 			State: State{
-				MinBackoff:          DefaultMinBackoff,
-				MaxBackoff:          DefaultMaxBackoff,
-				BackoffFactor:       DefaultBackoffFactor,
-				MaxBackoffJitter:    DefaultMaxBackoffJitter,
-				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
+				MinDelay:            defaultMinDelay,
+				MaxDelay:            defaultMaxDelay,
+				DelayFactor:         defaultDelayFactor,
+				MaxDelayJitter:      defaultMaxDelayJitter,
+				MaxNumberOfAttempts: defaultMaxNumberOfAttempts,
 			},
 		},
 		{
-			Given: "negative option MinBackoff, MaxBackoff, BackoffFactor",
+			Given: "negative option MinDelay, MaxDelay, DelayFactor",
 			Then:  "should overwrite options to default",
 			Setup: func(tc *TestCase) {
-				tc.o.MinBackoff = -1
-				tc.o.MaxBackoff = -2
-				tc.o.BackoffFactor = -3
+				tc.o.MinDelay = -1
+				tc.o.MaxDelay = -2
+				tc.o.DelayFactor = -3
 			},
 			State: State{
-				MinBackoff:          DefaultMinBackoff,
-				MaxBackoff:          DefaultMaxBackoff,
-				BackoffFactor:       DefaultBackoffFactor,
-				MaxBackoffJitter:    DefaultMaxBackoffJitter,
-				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
+				MinDelay:            defaultMinDelay,
+				MaxDelay:            defaultMaxDelay,
+				DelayFactor:         defaultDelayFactor,
+				MaxDelayJitter:      defaultMaxDelayJitter,
+				MaxNumberOfAttempts: defaultMaxNumberOfAttempts,
 			},
 		},
 		{
 			Given: "options with specified values",
 			Then:  "should not overwrite options",
 			Setup: func(tc *TestCase) {
-				*tc.o = tc.State
+				tc.o.MinDelay = 1
+				tc.o.MaxDelay = 2
+				tc.o.DelayFactor = 3
+				tc.o.MaxDelayJitter = 4
+				tc.o.MaxNumberOfAttempts = 5
 			},
 			State: State{
-				MinBackoff:          1,
-				MaxBackoff:          2,
-				BackoffFactor:       3,
-				MaxBackoffJitter:    4,
+				MinDelay:            1,
+				MaxDelay:            2,
+				DelayFactor:         3,
+				MaxDelayJitter:      4,
 				MaxNumberOfAttempts: 5,
 			},
 		},
 		{
-			Given: "option MaxBackoff less than option MinBackoff",
-			Then:  "should overwrite option MaxBackoff to MinBackoff",
+			Given: "option MaxDelay less than option MinDelay",
+			Then:  "should overwrite option MaxDelay to MinDelay",
 			Setup: func(tc *TestCase) {
-				tc.o.MinBackoff = 2
-				tc.o.MaxBackoff = 1
+				tc.o.MinDelay = 2
+				tc.o.MaxDelay = 1
 			},
 			State: State{
-				MinBackoff:          2,
-				MaxBackoff:          2,
-				BackoffFactor:       DefaultBackoffFactor,
-				MaxBackoffJitter:    DefaultMaxBackoffJitter,
-				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
+				MinDelay:            2,
+				MaxDelay:            2,
+				DelayFactor:         defaultDelayFactor,
+				MaxDelayJitter:      defaultMaxDelayJitter,
+				MaxNumberOfAttempts: defaultMaxNumberOfAttempts,
 			},
 		},
 		{
-			Given: "negative option MaxBackoffJitter",
-			Then:  "should overwrite option MaxBackoffJitter to zero",
+			Given: "negative option MaxDelayJitter",
+			Then:  "should overwrite option MaxDelayJitter to zero",
 			Setup: func(tc *TestCase) {
-				tc.o.MaxBackoffJitter = -100
+				tc.o.MaxDelayJitter = -100
 			},
 			State: State{
-				MinBackoff:          DefaultMinBackoff,
-				MaxBackoff:          DefaultMaxBackoff,
-				BackoffFactor:       DefaultBackoffFactor,
-				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
+				MinDelay:            defaultMinDelay,
+				MaxDelay:            defaultMaxDelay,
+				DelayFactor:         defaultDelayFactor,
+				MaxNumberOfAttempts: defaultMaxNumberOfAttempts,
 			},
 		},
 		{
@@ -93,34 +113,41 @@ func TestOptions_Sanitize(t *testing.T) {
 				tc.o.MaxNumberOfAttempts = -100
 			},
 			State: State{
-				MinBackoff:       DefaultMinBackoff,
-				MaxBackoff:       DefaultMaxBackoff,
-				BackoffFactor:    DefaultBackoffFactor,
-				MaxBackoffJitter: DefaultMaxBackoffJitter,
+				MinDelay:       defaultMinDelay,
+				MaxDelay:       defaultMaxDelay,
+				DelayFactor:    defaultDelayFactor,
+				MaxDelayJitter: defaultMaxDelayJitter,
 			},
 		},
 	}
 	for i := range testCases {
-		tc := &testCases[i]
+		tc := testCases[i]
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
-
 			t.Logf("\nGIVEN: %s\nWHEN: %s\nTHEN: %s", tc.Given, tc.When, tc.Then)
+			tc.t = t
 
 			var o Options
 			tc.o = &o
 
 			if f := tc.Setup; f != nil {
-				f(tc)
+				f(&tc)
 			}
 
 			o.Sanitize()
 
 			if f := tc.Teardown; f != nil {
-				f(tc)
+				f(&tc)
 			}
 
-			assert.Equal(t, tc.State, o)
+			var state State
+			state.MinDelay = o.MinDelay
+			state.MaxDelay = o.MaxDelay
+			state.DelayFactor = o.DelayFactor
+			state.MaxDelayJitter = o.MaxDelayJitter
+			state.DelayFuncIsNil = o.DelayFunc == nil
+			state.MaxNumberOfAttempts = o.MaxNumberOfAttempts
+			assert.Equal(t, tc.State, state)
 		})
 	}
 }

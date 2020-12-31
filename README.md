@@ -1,12 +1,10 @@
-# try
+# backoff
 
-[![Build Status](https://travis-ci.org/go-tk/try.svg?branch=master)](https://travis-ci.org/github/go-tk/try) [![Coverage Status](https://codecov.io/gh/go-tk/try/branch/master/graph/badge.svg)](https://codecov.io/gh/go-tk/try)
+[![GoDev](https://img.shields.io/static/v1?label=godev&message=reference&color=00add8)](https://pkg.go.dev/github.com/go-tk/backoff)
+[![Build Status](https://travis-ci.org/go-tk/backoff.svg?branch=master)](https://travis-ci.org/github/go-tk/backoff)
+[![Coverage Status](https://codecov.io/gh/go-tk/backoff/branch/master/graph/badge.svg)](https://codecov.io/gh/go-tk/backoff)
 
 Exponential backoff algorithm with jitter
-
-## Documentation
-
-See https://godoc.org/github.com/go-tk/try for details.
 
 ## Example
 
@@ -16,40 +14,49 @@ package main
 import (
         "context"
         "fmt"
+        "log"
         "net/http"
-        "strings"
         "time"
 
-        "github.com/go-tk/try"
+        "github.com/go-tk/backoff"
 )
 
 func main() {
-        var resp *http.Response
-        ok, err := try.Do(context.Background(), func() (bool, error) {
-                var err error
-                resp, err = http.Get("http://example.com")
-                if err != nil {
-                        if err, ok := err.(net.Error); ok && err.Temporary() {
-                                return false, nil // retry
-                        }
-                        return false, err // error
-                }
-                return true, nil // succeed
-        }, try.Options{
-                MinBackoff:          100 * time.Millisecond,
-                MaxBackoff:          5 * time.Second,
-                BackoffFactor:       2,
-                MaxNumberOfAttempts: 3,
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        _ = cancel
+        backoff := backoff.New(backoff.Options{
+                MinDelay:            100 * time.Millisecond,
+                MaxDelay:            100 * time.Second,
+                DelayFactor:         2,
+                MaxDelayJitter:      1,
+                DelayFunc:           backoff.DelayWithContext(ctx),
+                MaxNumberOfAttempts: 100,
         })
+        req, err := http.NewRequestWithContext(ctx, "GET", "http://example.com/", nil)
         if err != nil {
-                panic(err)
+                log.Fatal(err)
         }
-        if !ok {
-                // MaxNumberOfAttempts reached
+        for {
+                resp, err := http.DefaultClient.Do(req)
+                if err != nil {
+                        if err2 := backoff.Do(); err2 != nil {
+                                log.Printf("failed to back off; err=%q", err2)
+                                log.Fatal(err)
+                        }
+                        continue
+                }
+                resp.Body.Close()
+                if resp.StatusCode/100 == 5 {
+                        err := fmt.Errorf("http server failed; httpStatusCode=%v", resp.StatusCode)
+                        if err2 := backoff.Do(); err2 != nil {
+                                log.Printf("failed to back off; err=%q", err2)
+                                log.Fatal(err)
+                        }
+                        continue
+                }
+                fmt.Println(resp.StatusCode)
                 return
         }
-        resp.Body.Close()
-        fmt.Println(resp.StatusCode)
         // Output:
         // 200
 }

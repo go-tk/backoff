@@ -1,2 +1,2 @@
-// Package try implements exponential backoff algorithm with jitter.
-package try
+// Package backoff implements the exponential backoff algorithm with randomized jitter.
+package backoff

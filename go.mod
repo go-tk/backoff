@@ -1,4 +1,4 @@
-module github.com/go-tk/try
+module github.com/go-tk/backoff
 
 go 1.14
 
