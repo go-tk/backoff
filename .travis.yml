@@ -11,7 +11,7 @@ before_script:
   - rmdir --ignore-fail-on-non-empty .build
 
 script:
-  - make TESTFLAGS='-race -coverprofile=coverage.txt'
+  - make all GO_TEST_FLAGS='-race -coverprofile=coverage.txt'
   - git diff --exit-code
 
 after_success:
