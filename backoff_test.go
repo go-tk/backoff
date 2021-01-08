@@ -13,7 +13,7 @@ import (
 
 func TestBackoff_Do(t *testing.T) {
 	type Output struct {
-		ErrStr string
+		Err error
 	}
 	type TestCase struct {
 		Given, When, Then string
@@ -37,7 +37,7 @@ func TestBackoff_Do(t *testing.T) {
 				tc.t0 = time.Now()
 			},
 			Output: Output{
-				ErrStr: "backoff: too many attempts; maxNumberOfAttempts=1",
+				Err: ErrTooManyAttempts,
 			},
 			Teardown: func(tc *TestCase) {
 				d := time.Since(tc.t0)
@@ -57,7 +57,7 @@ func TestBackoff_Do(t *testing.T) {
 				tc.t0 = time.Now()
 			},
 			Output: Output{
-				ErrStr: "backoff: too many attempts; maxNumberOfAttempts=2",
+				Err: ErrTooManyAttempts,
 			},
 			Teardown: func(tc *TestCase) {
 				d := time.Since(tc.t0)
@@ -77,7 +77,7 @@ func TestBackoff_Do(t *testing.T) {
 				tc.t0 = time.Now()
 			},
 			Output: Output{
-				ErrStr: "backoff: too many attempts; maxNumberOfAttempts=3",
+				Err: ErrTooManyAttempts,
 			},
 			Teardown: func(tc *TestCase) {
 				d := time.Since(tc.t0)
@@ -96,7 +96,7 @@ func TestBackoff_Do(t *testing.T) {
 				tc.t0 = time.Now()
 			},
 			Output: Output{
-				ErrStr: "backoff: too many attempts; maxNumberOfAttempts=1",
+				Err: ErrTooManyAttempts,
 			},
 			Teardown: func(tc *TestCase) {
 				d := time.Since(tc.t0)
@@ -113,7 +113,7 @@ func TestBackoff_Do(t *testing.T) {
 				o.DelayFunc = DelayWithContext(ctx)
 			},
 			Output: Output{
-				ErrStr: "context deadline exceeded",
+				Err: context.DeadlineExceeded,
 			},
 		},
 		{
@@ -125,7 +125,7 @@ func TestBackoff_Do(t *testing.T) {
 				tc.t0 = time.Now()
 			},
 			Output: Output{
-				ErrStr: "backoff: too many attempts; maxNumberOfAttempts=0",
+				Err: ErrTooManyAttempts,
 			},
 			Teardown: func(tc *TestCase) {
 				d := time.Since(tc.t0)
@@ -158,7 +158,9 @@ func TestBackoff_Do(t *testing.T) {
 			}
 
 			var output Output
-			output.ErrStr = err.Error()
+			for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
+			}
+			output.Err = err
 			assert.Equal(t, tc.Output, output)
 
 			if f := tc.Teardown; f != nil {
