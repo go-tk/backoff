@@ -13,6 +13,9 @@ import (
 
 func TestBackoff_Do(t *testing.T) {
 	const Delta = float64(40 * time.Millisecond)
+	type Init struct {
+		Options Options
+	}
 	type Output struct {
 		Err error
 	}
@@ -20,14 +23,14 @@ func TestBackoff_Do(t *testing.T) {
 		B  *Backoff
 		T0 time.Time
 
-		Options        Options
+		Init           Init
 		Output         Output
 		ExceptedOutput Output
 	}
 	tc := testcase.New(func(t *testing.T) *Context {
 		return &Context{}
 	}).Setup(func(t *testing.T, c *Context) {
-		c.B = New(c.Options)
+		c.B = New(c.Init.Options)
 	}).Run(func(t *testing.T, c *Context) {
 		var err error
 		for {
@@ -48,9 +51,9 @@ func TestBackoff_Do(t *testing.T) {
 				Given("option MinDelay").
 				Then("should respect option MinDelay").
 				PreSetup(func(t *testing.T, c *Context) {
-					c.Options.MinDelay = 200 * time.Millisecond
-					c.Options.MaxDelayJitter = -1
-					c.Options.MaxNumberOfAttempts = 1
+					c.Init.Options.MinDelay = 200 * time.Millisecond
+					c.Init.Options.MaxDelayJitter = -1
+					c.Init.Options.MaxNumberOfAttempts = 1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExceptedOutput.Err = ErrTooManyAttempts
@@ -64,11 +67,11 @@ func TestBackoff_Do(t *testing.T) {
 				Given("option MaxDelay").
 				Then("should respect option MaxDelay").
 				PreSetup(func(t *testing.T, c *Context) {
-					c.Options.MinDelay = 10 * time.Millisecond
-					c.Options.MaxDelay = 200 * time.Millisecond
-					c.Options.DelayFactor = 100
-					c.Options.MaxDelayJitter = -1
-					c.Options.MaxNumberOfAttempts = 2
+					c.Init.Options.MinDelay = 10 * time.Millisecond
+					c.Init.Options.MaxDelay = 200 * time.Millisecond
+					c.Init.Options.DelayFactor = 100
+					c.Init.Options.MaxDelayJitter = -1
+					c.Init.Options.MaxNumberOfAttempts = 2
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExceptedOutput.Err = ErrTooManyAttempts
@@ -82,11 +85,11 @@ func TestBackoff_Do(t *testing.T) {
 				Given("option DelayFactor").
 				Then("should respect option DelayFactor").
 				PreSetup(func(t *testing.T, c *Context) {
-					c.Options.MinDelay = 100 * time.Millisecond
-					c.Options.MaxDelay = 1 * time.Second
-					c.Options.DelayFactor = 1.5
-					c.Options.MaxDelayJitter = -1
-					c.Options.MaxNumberOfAttempts = 3
+					c.Init.Options.MinDelay = 100 * time.Millisecond
+					c.Init.Options.MaxDelay = 1 * time.Second
+					c.Init.Options.DelayFactor = 1.5
+					c.Init.Options.MaxDelayJitter = -1
+					c.Init.Options.MaxNumberOfAttempts = 3
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExceptedOutput.Err = ErrTooManyAttempts
@@ -100,10 +103,10 @@ func TestBackoff_Do(t *testing.T) {
 				Given("option MaxDelayJitter").
 				Then("should respect option MaxDelayJitter").
 				PreSetup(func(t *testing.T, c *Context) {
-					c.Options.MinDelay = 200 * time.Millisecond
-					c.Options.MaxDelay = 200 * time.Second
-					c.Options.MaxDelayJitter = 0.3
-					c.Options.MaxNumberOfAttempts = 1
+					c.Init.Options.MinDelay = 200 * time.Millisecond
+					c.Init.Options.MaxDelay = 200 * time.Second
+					c.Init.Options.MaxDelayJitter = 0.3
+					c.Init.Options.MaxNumberOfAttempts = 1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExceptedOutput.Err = ErrTooManyAttempts
@@ -119,7 +122,7 @@ func TestBackoff_Do(t *testing.T) {
 				PreSetup(func(t *testing.T, c *Context) {
 					ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 					_ = cancel
-					c.Options.DelayFunc = DelayWithContext(ctx)
+					c.Init.Options.DelayFunc = DelayWithContext(ctx)
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExceptedOutput.Err = context.DeadlineExceeded
@@ -128,7 +131,7 @@ func TestBackoff_Do(t *testing.T) {
 				Given("option MaxNumberOfAttempts").
 				Then("should respect option MaxNumberOfAttempts").
 				PreSetup(func(t *testing.T, c *Context) {
-					c.Options.MaxNumberOfAttempts = -1
+					c.Init.Options.MaxNumberOfAttempts = -1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExceptedOutput.Err = ErrTooManyAttempts
