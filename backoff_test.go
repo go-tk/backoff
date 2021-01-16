@@ -25,7 +25,7 @@ func TestBackoff_Do(t *testing.T) {
 
 		Init           Init
 		Output         Output
-		ExceptedOutput Output
+		ExpectedOutput Output
 	}
 	tc := testcase.New(func(t *testing.T) *Context {
 		return &Context{}
@@ -43,7 +43,7 @@ func TestBackoff_Do(t *testing.T) {
 		for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
 		}
 		output.Err = err
-		assert.Equal(t, c.ExceptedOutput, output)
+		assert.Equal(t, c.ExpectedOutput, output)
 	})
 	for i := 0; i < 10; i++ {
 		testcase.RunList(t, []testcase.TestCase{
@@ -56,7 +56,7 @@ func TestBackoff_Do(t *testing.T) {
 					c.Init.Options.MaxNumberOfAttempts = 1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
-					c.ExceptedOutput.Err = ErrTooManyAttempts
+					c.ExpectedOutput.Err = ErrTooManyAttempts
 					c.T0 = time.Now()
 				}).
 				PostRun(func(t *testing.T, c *Context) {
@@ -74,7 +74,7 @@ func TestBackoff_Do(t *testing.T) {
 					c.Init.Options.MaxNumberOfAttempts = 2
 				}).
 				PreRun(func(t *testing.T, c *Context) {
-					c.ExceptedOutput.Err = ErrTooManyAttempts
+					c.ExpectedOutput.Err = ErrTooManyAttempts
 					c.T0 = time.Now()
 				}).
 				PostRun(func(t *testing.T, c *Context) {
@@ -92,7 +92,7 @@ func TestBackoff_Do(t *testing.T) {
 					c.Init.Options.MaxNumberOfAttempts = 3
 				}).
 				PreRun(func(t *testing.T, c *Context) {
-					c.ExceptedOutput.Err = ErrTooManyAttempts
+					c.ExpectedOutput.Err = ErrTooManyAttempts
 					c.T0 = time.Now()
 				}).
 				PostRun(func(t *testing.T, c *Context) {
@@ -109,7 +109,7 @@ func TestBackoff_Do(t *testing.T) {
 					c.Init.Options.MaxNumberOfAttempts = 1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
-					c.ExceptedOutput.Err = ErrTooManyAttempts
+					c.ExpectedOutput.Err = ErrTooManyAttempts
 					c.T0 = time.Now()
 				}).
 				PostRun(func(t *testing.T, c *Context) {
@@ -125,7 +125,7 @@ func TestBackoff_Do(t *testing.T) {
 					c.Init.Options.DelayFunc = DelayWithContext(ctx)
 				}).
 				PreRun(func(t *testing.T, c *Context) {
-					c.ExceptedOutput.Err = context.DeadlineExceeded
+					c.ExpectedOutput.Err = context.DeadlineExceeded
 				}),
 			tc.Copy().
 				Given("option MaxNumberOfAttempts").
@@ -134,7 +134,7 @@ func TestBackoff_Do(t *testing.T) {
 					c.Init.Options.MaxNumberOfAttempts = -1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
-					c.ExceptedOutput.Err = ErrTooManyAttempts
+					c.ExpectedOutput.Err = ErrTooManyAttempts
 					c.T0 = time.Now()
 				}),
 		})
