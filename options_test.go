@@ -31,7 +31,15 @@ func TestOptions_Sanitize(t *testing.T) {
 		ExpectedState State
 	}
 	tc := testcase.New(func(t *testing.T) *Context {
-		return &Context{}
+		return &Context{
+			ExpectedState: State{
+				MinDelay:            DefaultMinDelay,
+				MaxDelay:            DefaultMaxDelay,
+				DelayFactor:         DefaultDelayFactor,
+				MaxDelayJitter:      DefaultMaxDelayJitter,
+				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
+			},
+		}
 	}).Run(func(t *testing.T, c *Context) {
 		c.O.Sanitize()
 		var state State
@@ -45,30 +53,14 @@ func TestOptions_Sanitize(t *testing.T) {
 	})
 	testcase.RunListParallel(t, []testcase.TestCase{
 		tc.Copy().
-			Then("should overwrite options unset to default").
-			PreRun(func(t *testing.T, c *Context) {
-				c.ExpectedState = State{
-					MinDelay:            DefaultMinDelay,
-					MaxDelay:            DefaultMaxDelay,
-					DelayFactor:         DefaultDelayFactor,
-					MaxDelayJitter:      DefaultMaxDelayJitter,
-					MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
-				}
-			}),
+			Then("should overwrite options unset to default"),
 		tc.Copy().
 			Given("negative option MinDelay, MaxDelay, DelayFactor").
-			Then("should overwrite options unset to default").
+			Then("should overwrite options to default").
 			PreRun(func(t *testing.T, c *Context) {
 				c.O.MinDelay = -1
 				c.O.MaxDelay = -2
 				c.O.DelayFactor = -3
-				c.ExpectedState = State{
-					MinDelay:            DefaultMinDelay,
-					MaxDelay:            DefaultMaxDelay,
-					DelayFactor:         DefaultDelayFactor,
-					MaxDelayJitter:      DefaultMaxDelayJitter,
-					MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
-				}
 			}),
 		tc.Copy().
 			Given("options with specified values").
@@ -93,37 +85,17 @@ func TestOptions_Sanitize(t *testing.T) {
 			PreRun(func(t *testing.T, c *Context) {
 				c.O.MinDelay = 2
 				c.O.MaxDelay = 1
-				c.ExpectedState = State{
-					MinDelay:            2,
-					MaxDelay:            2,
-					DelayFactor:         DefaultDelayFactor,
-					MaxDelayJitter:      DefaultMaxDelayJitter,
-					MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
-				}
+				c.ExpectedState.MinDelay = 2
+				c.ExpectedState.MaxDelay = 2
 			}),
 		tc.Copy().
-			Given("negative option MaxDelayJitter").
+			Given("negative option MaxDelayJitter, MaxNumberOfAttempts").
 			Then("should overwrite option MaxDelayJitter to zero").
 			PreRun(func(t *testing.T, c *Context) {
 				c.O.MaxDelayJitter = -100
-				c.ExpectedState = State{
-					MinDelay:            DefaultMinDelay,
-					MaxDelay:            DefaultMaxDelay,
-					DelayFactor:         DefaultDelayFactor,
-					MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
-				}
-			}),
-		tc.Copy().
-			Given("negative option MaxNumberOfAttempts").
-			Then("should overwrite option MaxNumberOfAttempts to zero").
-			PreRun(func(t *testing.T, c *Context) {
 				c.O.MaxNumberOfAttempts = -100
-				c.ExpectedState = State{
-					MinDelay:       DefaultMinDelay,
-					MaxDelay:       DefaultMaxDelay,
-					DelayFactor:    DefaultDelayFactor,
-					MaxDelayJitter: DefaultMaxDelayJitter,
-				}
+				c.ExpectedState.MaxDelayJitter = 0
+				c.ExpectedState.MaxNumberOfAttempts = 0
 			}),
 	})
 }
