@@ -46,7 +46,7 @@ func TestBackoff_Do(t *testing.T) {
 		assert.Equal(t, c.ExpectedOutput, output)
 	})
 	for i := 0; i < 10; i++ {
-		testcase.RunList(t, []testcase.TestCase{
+		testcase.RunList(t,
 			tc.Copy().
 				Given("option MinDelay").
 				Then("should respect option MinDelay").
@@ -137,6 +137,6 @@ func TestBackoff_Do(t *testing.T) {
 					c.ExpectedOutput.Err = ErrTooManyAttempts
 					c.T0 = time.Now()
 				}),
-		})
+		)
 	}
 }

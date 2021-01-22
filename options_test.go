@@ -51,7 +51,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		state.MaxNumberOfAttempts = c.O.MaxNumberOfAttempts
 		assert.Equal(t, c.ExpectedState, state)
 	})
-	testcase.RunListParallel(t, []testcase.TestCase{
+	testcase.RunListParallel(t,
 		tc.Copy().
 			Then("should overwrite options unset to default"),
 		tc.Copy().
@@ -97,5 +97,5 @@ func TestOptions_Sanitize(t *testing.T) {
 				c.ExpectedState.MaxDelayJitter = 0
 				c.ExpectedState.MaxNumberOfAttempts = 0
 			}),
-	})
+	)
 }
