@@ -8,11 +8,14 @@ cache:
     - .build
 
 before_script:
-  - rmdir --ignore-fail-on-non-empty .build
+  - chown --recursive travis:travis .build && rmdir --ignore-fail-on-non-empty .build
 
 script:
-  - make all GO_TEST_FLAGS='-race -coverprofile=coverage.txt'
-  - git diff --exit-code
+  - >-
+    make all
+    POST_GENERATE='git diff --exit-code'
+    POST_FMT='git diff --exit-code'
+    GO_TEST_FLAGS='-race -coverprofile=coverage.txt'
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - bash <(curl -s https://codecov.io/bash) -f coverage.txt -X fix
