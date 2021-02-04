@@ -10,6 +10,7 @@ override build_ttl := 24 * 60 * 60
 .ONESHELL:
 $(targets):
 	@if [[ -d $(build_dir) ]] && [[ $$(($$(date +%s) - $$(date -r $(build_dir) +%s))) -gt $$(($(build_ttl))) ]]; then
+		find $(build_dir) -type d ! -perm -u+rwx -exec chmod -u+rwx {} \;
 		rm -rf $(build_dir)
 	fi
 	if [[ ! -d $(build_dir) ]]; then

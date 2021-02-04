@@ -8,7 +8,7 @@ cache:
     - .build
 
 before_script:
-  - chown --recursive travis:travis .build && rmdir --ignore-fail-on-non-empty .build
+  - rmdir --ignore-fail-on-non-empty .build
 
 script:
   - >-
