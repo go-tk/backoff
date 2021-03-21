@@ -46,7 +46,7 @@ func TestBackoff_Do(t *testing.T) {
 		assert.Equal(t, c.ExpectedOutput, output)
 	})
 	for i := 0; i < 10; i++ {
-		testcase.RunList(t,
+		testcase.RunListParallel(t,
 			tc.Copy().
 				Given("option MinDelay").
 				Then("should respect option MinDelay").
@@ -128,14 +128,31 @@ func TestBackoff_Do(t *testing.T) {
 					c.ExpectedOutput.Err = context.DeadlineExceeded
 				}),
 			tc.Copy().
-				Given("option MaxNumberOfAttempts").
-				Then("should respect option MaxNumberOfAttempts").
+				Given("option MaxNumberOfAttempts with positive value").
+				Then("should respect option MaxNumberOfAttempts (1)").
 				PreSetup(func(t *testing.T, c *Context) {
-					c.Init.Options.MaxNumberOfAttempts = -1
+					c.Init.Options.MaxNumberOfAttempts = 1
 				}).
 				PreRun(func(t *testing.T, c *Context) {
 					c.ExpectedOutput.Err = ErrTooManyAttempts
-					c.T0 = time.Now()
+				}).
+				PostRun(func(t *testing.T, c *Context) {
+					err := c.B.Do()
+					for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
+					}
+					assert.Equal(t, ErrTooManyAttempts, err)
+				}),
+			tc.Copy().
+				Given("option MaxNumberOfAttempts with negative value").
+				Then("should respect option MaxNumberOfAttempts (2)").
+				PreSetup(func(t *testing.T, c *Context) {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+					_ = cancel
+					c.Init.Options.DelayFunc = DelayWithContext(ctx)
+					c.Init.Options.MaxNumberOfAttempts = -1
+				}).
+				PreRun(func(t *testing.T, c *Context) {
+					c.ExpectedOutput.Err = context.DeadlineExceeded
 				}),
 		)
 	}

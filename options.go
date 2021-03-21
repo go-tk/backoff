@@ -36,7 +36,7 @@ type Options struct {
 	//  }
 	DelayFunc DelayFunc
 
-	// Value < 0 is equivalent to 0.
+	// Value < 0 is equivalent to no limit.
 	// value == 0 is equivalent to 100.
 	MaxNumberOfAttempts int
 }

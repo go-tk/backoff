@@ -22,14 +22,14 @@ func New(options Options) *Backoff {
 
 // Do delays for a time period determined based on the options.
 func (b *Backoff) Do() error {
-	attemptCount := b.attemptCount
-	b.attemptCount++
-	if attemptCount == 0 {
+	if b.attemptCount == 0 {
 		b.options.sanitize()
+	} else {
+		if b.options.MaxNumberOfAttempts >= 1 && b.attemptCount == b.options.MaxNumberOfAttempts {
+			return fmt.Errorf("%w; maxNumberOfAttempts=%v", ErrTooManyAttempts, b.options.MaxNumberOfAttempts)
+		}
 	}
-	if attemptCount >= b.options.MaxNumberOfAttempts {
-		return fmt.Errorf("%w; maxNumberOfAttempts=%v", ErrTooManyAttempts, b.options.MaxNumberOfAttempts)
-	}
+	b.attemptCount++
 	b.timer.Start(b.options.MinDelay, b.options.MaxDelay, b.options.DelayFactor, b.options.MaxDelayJitter)
 	defer b.timer.Stop()
 	event := b.timer.Expiration()
