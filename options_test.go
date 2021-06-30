@@ -10,13 +10,6 @@ import (
 )
 
 func TestOptions_Sanitize(t *testing.T) {
-	const (
-		DefaultMinDelay            time.Duration = 100 * time.Millisecond
-		DefaultMaxDelay            time.Duration = 100 * time.Second
-		DefaultDelayFactor         float64       = 2
-		DefaultMaxDelayJitter      float64       = 1
-		DefaultMaxNumberOfAttempts               = 100
-	)
 	type State struct {
 		MinDelay            time.Duration
 		MaxDelay            time.Duration
@@ -25,77 +18,67 @@ func TestOptions_Sanitize(t *testing.T) {
 		DelayFuncIsNil      bool
 		MaxNumberOfAttempts int
 	}
-	type Context struct {
-		O Options
+	type Workspace struct {
+		testcase.WorkspaceBase
 
+		O             Options
 		ExpectedState State
 	}
-	tc := testcase.New(func(t *testing.T) *Context {
-		return &Context{
-			ExpectedState: State{
+	tc := testcase.New().
+		AddTask(1000, func(w *Workspace) {
+			w.ExpectedState = State{
 				MinDelay:            DefaultMinDelay,
 				MaxDelay:            DefaultMaxDelay,
 				DelayFactor:         DefaultDelayFactor,
 				MaxDelayJitter:      DefaultMaxDelayJitter,
 				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
-			},
-		}
-	}).Run(func(t *testing.T, c *Context) {
-		c.O.Sanitize()
-		var state State
-		state.MinDelay = c.O.MinDelay
-		state.MaxDelay = c.O.MaxDelay
-		state.DelayFactor = c.O.DelayFactor
-		state.MaxDelayJitter = c.O.MaxDelayJitter
-		state.DelayFuncIsNil = c.O.DelayFunc == nil
-		state.MaxNumberOfAttempts = c.O.MaxNumberOfAttempts
-		assert.Equal(t, c.ExpectedState, state)
-	})
+			}
+		}).
+		AddTask(2000, func(w *Workspace) {
+			w.O.Sanitize()
+			state := State{
+				MinDelay:            w.O.MinDelay.Value(),
+				MaxDelay:            w.O.MaxDelay.Value(),
+				DelayFactor:         w.O.DelayFactor.Value(),
+				MaxDelayJitter:      w.O.MaxDelayJitter.Value(),
+				DelayFuncIsNil:      w.O.DelayFunc == nil,
+				MaxNumberOfAttempts: w.O.MaxNumberOfAttempts.Value(),
+			}
+			assert.Equal(w.T(), w.ExpectedState, state)
+		})
 	testcase.RunListParallel(t,
 		tc.Copy().
-			Then("should overwrite options unset to default"),
+			Given("no option values").
+			Then("should set option values to default"),
 		tc.Copy().
-			Given("negative option MinDelay, MaxDelay, DelayFactor").
-			Then("should overwrite options to default").
-			PreRun(func(t *testing.T, c *Context) {
-				c.O.MinDelay = -1
-				c.O.MaxDelay = -2
-				c.O.DelayFactor = -3
+			Given("invalid option values").
+			Then("should set invalid option values to default").
+			AddTask(1999, func(w *Workspace) {
+				w.O.MinDelay.Set(-1)
+				w.O.MaxDelay.Set(-1)
+				w.O.DelayFactor.Set(-1)
 			}),
 		tc.Copy().
-			Given("options with specified values").
-			Then("should not overwrite options").
-			PreRun(func(t *testing.T, c *Context) {
-				c.O.MinDelay = 1
-				c.O.MaxDelay = 2
-				c.O.DelayFactor = 3
-				c.O.MaxDelayJitter = 4
-				c.O.MaxNumberOfAttempts = 5
-				c.ExpectedState = State{
-					MinDelay:            1,
-					MaxDelay:            2,
-					DelayFactor:         3,
-					MaxDelayJitter:      4,
-					MaxNumberOfAttempts: 5,
-				}
+			Given("valid option values").
+			Then("should preserve option values").
+			AddTask(1999, func(w *Workspace) {
+				w.O.MinDelay.Set(1 * time.Second)
+				w.ExpectedState.MinDelay = w.O.MinDelay.Value()
+				w.O.MaxDelay.Set(2 * time.Second)
+				w.ExpectedState.MaxDelay = w.O.MaxDelay.Value()
+				w.O.DelayFactor.Set(3)
+				w.ExpectedState.DelayFactor = w.O.DelayFactor.Value()
+				w.O.MaxDelayJitter.Set(0.3)
+				w.ExpectedState.MaxDelayJitter = w.O.MaxDelayJitter.Value()
+				w.O.MaxNumberOfAttempts.Set(0)
+				w.ExpectedState.MaxNumberOfAttempts = w.O.MaxNumberOfAttempts.Value()
 			}),
 		tc.Copy().
-			Given("option MaxDelay less than option MinDelay").
-			Then("should overwrite option MaxDelay to MinDelay").
-			PreRun(func(t *testing.T, c *Context) {
-				c.O.MinDelay = 2
-				c.O.MaxDelay = 1
-				c.ExpectedState.MinDelay = 2
-				c.ExpectedState.MaxDelay = 2
-			}),
-		tc.Copy().
-			Given("negative option MaxDelayJitter, MaxNumberOfAttempts").
-			Then("should overwrite option MaxDelayJitter to zero").
-			PreRun(func(t *testing.T, c *Context) {
-				c.O.MaxDelayJitter = -100
-				c.O.MaxNumberOfAttempts = -100
-				c.ExpectedState.MaxDelayJitter = 0
-				c.ExpectedState.MaxNumberOfAttempts = 0
+			Given("MinDelay option value > MaxDelay option value").
+			Then("should set MinDelay/MaxDelay option values to default").
+			AddTask(1999, func(w *Workspace) {
+				w.O.MinDelay.Set(2 * time.Second)
+				w.O.MaxDelay.Set(1 * time.Second)
 			}),
 	)
 }

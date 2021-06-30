@@ -9,6 +9,7 @@ import (
 type Backoff struct {
 	options      Options
 	attemptCount int
+	delay        delay
 	timer        timer
 }
 
@@ -22,18 +23,19 @@ func New(options Options) *Backoff {
 
 // Do delays for a time period determined based on the options.
 func (b *Backoff) Do() error {
-	if b.attemptCount == 0 {
-		b.options.sanitize()
-	} else {
-		if b.options.MaxNumberOfAttempts >= 1 && b.attemptCount == b.options.MaxNumberOfAttempts {
-			return fmt.Errorf("%w; maxNumberOfAttempts=%v", ErrTooManyAttempts, b.options.MaxNumberOfAttempts)
-		}
-	}
+	attemptCount := b.attemptCount
 	b.attemptCount++
-	b.timer.Start(b.options.MinDelay, b.options.MaxDelay, b.options.DelayFactor, b.options.MaxDelayJitter)
+	if attemptCount == 0 {
+		b.options.sanitize()
+	}
+	if b.options.MaxNumberOfAttempts.Value() >= 0 && attemptCount >= b.options.MaxNumberOfAttempts.Value() {
+		return fmt.Errorf("%w; maxNumberOfAttempts=%v", ErrTooManyAttempts, b.options.MaxNumberOfAttempts)
+	}
+	delay := b.delay.Update(b.options.MinDelay.Value(), b.options.MaxDelay.Value(),
+		b.options.DelayFactor.Value(), b.options.MaxDelayJitter.Value())
+	timedOut := b.timer.Start(delay)
 	defer b.timer.Stop()
-	event := b.timer.Expiration()
-	if err := b.options.DelayFunc(event); err != nil {
+	if err := b.options.DelayFunc(timedOut); err != nil {
 		return err
 	}
 	return nil

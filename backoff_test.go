@@ -12,148 +12,122 @@ import (
 )
 
 func TestBackoff_Do(t *testing.T) {
-	const Delta = float64(40 * time.Millisecond)
 	type Init struct {
 		Options Options
 	}
 	type Output struct {
 		Err error
 	}
-	type Context struct {
-		B  *Backoff
-		T0 time.Time
+	type Workspace struct {
+		testcase.WorkspaceBase
 
-		Init           Init
-		Output         Output
-		ExpectedOutput Output
+		B                *Backoff
+		Init             Init
+		ExpectedOutput   Output
+		DurationInterval [2]time.Duration
 	}
-	tc := testcase.New(func(t *testing.T) *Context {
-		return &Context{}
-	}).Setup(func(t *testing.T, c *Context) {
-		c.B = New(c.Init.Options)
-	}).Run(func(t *testing.T, c *Context) {
-		var err error
-		for {
-			err = c.B.Do()
-			if err != nil {
-				break
+	tc := testcase.New().
+		AddTask(1000, func(w *Workspace) {
+			w.B = New(w.Init.Options)
+		}).
+		AddTask(2000, func(w *Workspace) {
+			t0 := time.Now()
+			var err error
+			for {
+				err = w.B.Do()
+				if err != nil {
+					break
+				}
 			}
-		}
-		var output Output
-		for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
-		}
-		output.Err = err
-		assert.Equal(t, c.ExpectedOutput, output)
-	})
-	for i := 0; i < 10; i++ {
-		testcase.RunListParallel(t,
-			tc.Copy().
-				Given("option MinDelay").
-				Then("should respect option MinDelay").
-				PreSetup(func(t *testing.T, c *Context) {
-					c.Init.Options.MinDelay = 200 * time.Millisecond
-					c.Init.Options.MaxDelayJitter = -1
-					c.Init.Options.MaxNumberOfAttempts = 1
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = ErrTooManyAttempts
-					c.T0 = time.Now()
-				}).
-				PostRun(func(t *testing.T, c *Context) {
-					d := time.Since(c.T0)
-					assert.InDelta(t, 200*time.Millisecond, d, Delta)
-				}),
-			tc.Copy().
-				Given("option MaxDelay").
-				Then("should respect option MaxDelay").
-				PreSetup(func(t *testing.T, c *Context) {
-					c.Init.Options.MinDelay = 10 * time.Millisecond
-					c.Init.Options.MaxDelay = 200 * time.Millisecond
-					c.Init.Options.DelayFactor = 100
-					c.Init.Options.MaxDelayJitter = -1
-					c.Init.Options.MaxNumberOfAttempts = 2
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = ErrTooManyAttempts
-					c.T0 = time.Now()
-				}).
-				PostRun(func(t *testing.T, c *Context) {
-					d := time.Since(c.T0)
-					assert.InDelta(t, 210*time.Millisecond, d, Delta)
-				}),
-			tc.Copy().
-				Given("option DelayFactor").
-				Then("should respect option DelayFactor").
-				PreSetup(func(t *testing.T, c *Context) {
-					c.Init.Options.MinDelay = 100 * time.Millisecond
-					c.Init.Options.MaxDelay = 1 * time.Second
-					c.Init.Options.DelayFactor = 1.5
-					c.Init.Options.MaxDelayJitter = -1
-					c.Init.Options.MaxNumberOfAttempts = 3
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = ErrTooManyAttempts
-					c.T0 = time.Now()
-				}).
-				PostRun(func(t *testing.T, c *Context) {
-					d := time.Since(c.T0)
-					assert.InDelta(t, 475*time.Millisecond, d, Delta)
-				}),
-			tc.Copy().
-				Given("option MaxDelayJitter").
-				Then("should respect option MaxDelayJitter").
-				PreSetup(func(t *testing.T, c *Context) {
-					c.Init.Options.MinDelay = 200 * time.Millisecond
-					c.Init.Options.MaxDelay = 200 * time.Second
-					c.Init.Options.MaxDelayJitter = 0.3
-					c.Init.Options.MaxNumberOfAttempts = 1
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = ErrTooManyAttempts
-					c.T0 = time.Now()
-				}).
-				PostRun(func(t *testing.T, c *Context) {
-					d := time.Since(c.T0)
-					assert.InDelta(t, 200*time.Millisecond, d, float64(60*time.Millisecond)+Delta)
-				}),
-			tc.Copy().
-				Given("option DelayFunc").
-				Then("should respect option DelayFunc").
-				PreSetup(func(t *testing.T, c *Context) {
-					ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-					_ = cancel
-					c.Init.Options.DelayFunc = DelayWithContext(ctx)
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = context.DeadlineExceeded
-				}),
-			tc.Copy().
-				Given("option MaxNumberOfAttempts with positive value").
-				Then("should respect option MaxNumberOfAttempts (1)").
-				PreSetup(func(t *testing.T, c *Context) {
-					c.Init.Options.MaxNumberOfAttempts = 1
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = ErrTooManyAttempts
-				}).
-				PostRun(func(t *testing.T, c *Context) {
-					err := c.B.Do()
-					for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
-					}
-					assert.Equal(t, ErrTooManyAttempts, err)
-				}),
-			tc.Copy().
-				Given("option MaxNumberOfAttempts with negative value").
-				Then("should respect option MaxNumberOfAttempts (2)").
-				PreSetup(func(t *testing.T, c *Context) {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-					_ = cancel
-					c.Init.Options.DelayFunc = DelayWithContext(ctx)
-					c.Init.Options.MaxNumberOfAttempts = -1
-				}).
-				PreRun(func(t *testing.T, c *Context) {
-					c.ExpectedOutput.Err = context.DeadlineExceeded
-				}),
-		)
-	}
+			duration := time.Since(t0)
+			for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
+			}
+			var output Output
+			output.Err = err
+			assert.Equal(t, w.ExpectedOutput, output)
+			if w.DurationInterval != [2]time.Duration{} {
+				assert.GreaterOrEqual(t, duration, w.DurationInterval[0])
+				assert.LessOrEqual(t, duration, w.DurationInterval[1])
+			}
+		})
+	testcase.RunListParallel(t,
+		tc.Copy().
+			Given("MinDelay option").
+			Then("should respect MinDelay option").
+			AddTask(999, func(w *Workspace) {
+				w.Init.Options.MinDelay.Set(500 * time.Millisecond)
+				w.Init.Options.MaxDelayJitter.Set(0)
+				w.Init.Options.MaxNumberOfAttempts.Set(1)
+				w.ExpectedOutput.Err = ErrTooManyAttempts
+				w.DurationInterval[0] = 500 * time.Millisecond
+				w.DurationInterval[1] = (500 + 100) * time.Millisecond
+			}),
+		tc.Copy().
+			Given("MaxDelay option").
+			Then("should respect MaxDelay option").
+			AddTask(999, func(w *Workspace) {
+				w.Init.Options.MinDelay.Set(150 * time.Millisecond)
+				w.Init.Options.MaxDelay.Set(200 * time.Millisecond)
+				w.Init.Options.DelayFactor.Set(100)
+				w.Init.Options.MaxDelayJitter.Set(0)
+				w.Init.Options.MaxNumberOfAttempts.Set(3)
+				w.ExpectedOutput.Err = ErrTooManyAttempts
+				w.DurationInterval[0] = 550 * time.Millisecond
+				w.DurationInterval[1] = (550 + 100) * time.Millisecond
+			}),
+		tc.Copy().
+			Given("DelayFactor option").
+			Then("should respect DelayFactor option").
+			AddTask(999, func(w *Workspace) {
+				w.Init.Options.MinDelay.Set(50 * time.Millisecond)
+				w.Init.Options.MaxDelay.Set(time.Hour)
+				w.Init.Options.DelayFactor.Set(3)
+				w.Init.Options.MaxDelayJitter.Set(0)
+				w.Init.Options.MaxNumberOfAttempts.Set(3)
+				w.ExpectedOutput.Err = ErrTooManyAttempts
+				w.DurationInterval[0] = 650 * time.Millisecond
+				w.DurationInterval[1] = (650 + 100) * time.Millisecond
+			}),
+		tc.Copy().
+			Given("MaxDelayJitter option").
+			Then("should respect MaxDelayJitter option").
+			AddTask(999, func(w *Workspace) {
+				w.Init.Options.MinDelay.Set(400 * time.Millisecond)
+				w.Init.Options.MaxDelayJitter.Set(0.25)
+				w.Init.Options.MaxNumberOfAttempts.Set(1)
+				w.ExpectedOutput.Err = ErrTooManyAttempts
+				w.DurationInterval[0] = 300 * time.Millisecond
+				w.DurationInterval[1] = (500 + 100) * time.Millisecond
+			}),
+		tc.Copy().
+			Given("DelayFunc option").
+			Then("should respect DelayFunc option").
+			AddTask(999, func(w *Workspace) {
+				w.Init.Options.MinDelay.Set(time.Hour)
+				w.Init.Options.MaxDelay.Set(time.Hour)
+				w.Init.Options.MaxDelayJitter.Set(0)
+				ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+				_ = cancel
+				w.Init.Options.DelayFunc = DelayWithContext(ctx)
+				w.Init.Options.MaxNumberOfAttempts.Set(1)
+				w.ExpectedOutput.Err = context.DeadlineExceeded
+				w.DurationInterval[0] = 300 * time.Millisecond
+				w.DurationInterval[1] = (300 + 100) * time.Millisecond
+			}),
+		tc.Copy().
+			Given("MaxNumberOfAttempts option with negative value").
+			Then("should not limit number of attempts").
+			AddTask(999, func(w *Workspace) {
+				w.Init.Options.MinDelay.Set(100 * time.Millisecond)
+				w.Init.Options.MaxDelay.Set(100 * time.Millisecond)
+				w.Init.Options.MaxDelayJitter.Set(0)
+				ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				_ = cancel
+				w.Init.Options.DelayFunc = DelayWithContext(ctx)
+				w.Init.Options.MaxNumberOfAttempts.Set(-1)
+				w.ExpectedOutput.Err = context.DeadlineExceeded
+				w.DurationInterval[0] = 500 * time.Millisecond
+				w.DurationInterval[1] = (500 + 100) * time.Millisecond
+			}),
+	)
 }
