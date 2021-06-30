@@ -118,8 +118,8 @@ func TestBackoff_Do(t *testing.T) {
 			Given("MaxNumberOfAttempts option with negative value").
 			Then("should not limit number of attempts").
 			AddTask(999, func(w *Workspace) {
-				w.Init.Options.MinDelay.Set(100 * time.Millisecond)
-				w.Init.Options.MaxDelay.Set(100 * time.Millisecond)
+				w.Init.Options.MinDelay.Set(50 * time.Millisecond)
+				w.Init.Options.MaxDelay.Set(50 * time.Millisecond)
 				w.Init.Options.MaxDelayJitter.Set(0)
 				ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 				_ = cancel

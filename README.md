@@ -19,18 +19,19 @@ import (
         "time"
 
         "github.com/go-tk/backoff"
+        "github.com/go-tk/optional"
 )
 
 func main() {
         ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
         _ = cancel
         b := backoff.New(backoff.Options{
-                MinDelay:            100 * time.Millisecond,        // default
-                MaxDelay:            100 * time.Second,             // default
-                DelayFactor:         2,                             // default
-                MaxDelayJitter:      1,                             // default
-                DelayFunc:           backoff.DelayWithContext(ctx), // with respect to ctx
-                MaxNumberOfAttempts: 100,                           // default
+                MinDelay:            optional.MakeDuration(100 * time.Millisecond), // default
+                MaxDelay:            optional.MakeDuration(100 * time.Second),      // default
+                DelayFactor:         optional.MakeFloat64(2),                       // default
+                MaxDelayJitter:      optional.MakeFloat64(1),                       // default
+                DelayFunc:           backoff.DelayWithContext(ctx),                 // with respect to ctx
+                MaxNumberOfAttempts: optional.MakeInt(100),                         // default
         })
         req, err := http.NewRequestWithContext(ctx, "GET", "http://example.com/", nil)
         if err != nil {
