@@ -1,8 +1,9 @@
 # backoff
 
-[![GoDev](https://pkg.go.dev/badge/golang.org/x/pkgsite.svg)](https://pkg.go.dev/github.com/go-tk/backoff)
-[![Build Status](https://travis-ci.org/go-tk/backoff.svg?branch=master)](https://travis-ci.org/github/go-tk/backoff)
-[![Coverage Status](https://codecov.io/gh/go-tk/backoff/branch/master/graph/badge.svg)](https://codecov.io/gh/go-tk/backoff)
+[![GoDev](https://pkg.go.dev/badge/golang.org/x/pkgsite.svg)](https://pkg.go.dev/github.com/go-tk/backoff
+) [![Build Status](https://travis-ci.org/go-tk/backoff.svg?branch=master)](https://travis-ci.org/github/go-tk/backoff
+) [![Coverage Status](https://codecov.io/gh/go-tk/backoff/branch/master/graph/badge.svg)](https://codecov.io/gh/go-tk/backoff
+)
 
 Exponential backoff algorithm with randomized jitter
 
