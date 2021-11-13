@@ -1,6 +1,6 @@
 module github.com/go-tk/backoff
 
-go 1.14
+go 1.16
 
 require (
 	github.com/go-tk/optional v0.0.0-20210629152221-dbe139389003
