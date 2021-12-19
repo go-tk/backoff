@@ -19,18 +19,16 @@ func TestBackoff_Do(t *testing.T) {
 		Err error
 	}
 	type Workspace struct {
-		testcase.WorkspaceBase
-
 		B                *Backoff
 		Init             Init
 		ExpectedOutput   Output
 		DurationInterval [2]time.Duration
 	}
 	tc := testcase.New().
-		AddTask(10, func(w *Workspace) {
+		Step(1, func(t *testing.T, w *Workspace) {
 			w.B = New(w.Init.Options)
 		}).
-		AddTask(20, func(w *Workspace) {
+		Step(2, func(t *testing.T, w *Workspace) {
 			t0 := time.Now()
 			var err error
 			for {
@@ -54,7 +52,7 @@ func TestBackoff_Do(t *testing.T) {
 		tc.Copy().
 			Given("MinDelay option").
 			Then("should respect MinDelay option").
-			AddTask(9, func(w *Workspace) {
+			Step(0.5, func(t *testing.T, w *Workspace) {
 				w.Init.Options.MinDelay.Set(500 * time.Millisecond)
 				w.Init.Options.MaxDelayJitter.Set(0)
 				w.Init.Options.MaxNumberOfAttempts.Set(1)
@@ -65,7 +63,7 @@ func TestBackoff_Do(t *testing.T) {
 		tc.Copy().
 			Given("MaxDelay option").
 			Then("should respect MaxDelay option").
-			AddTask(9, func(w *Workspace) {
+			Step(0.5, func(t *testing.T, w *Workspace) {
 				w.Init.Options.MinDelay.Set(150 * time.Millisecond)
 				w.Init.Options.MaxDelay.Set(200 * time.Millisecond)
 				w.Init.Options.DelayFactor.Set(100)
@@ -78,7 +76,7 @@ func TestBackoff_Do(t *testing.T) {
 		tc.Copy().
 			Given("DelayFactor option").
 			Then("should respect DelayFactor option").
-			AddTask(9, func(w *Workspace) {
+			Step(0.5, func(t *testing.T, w *Workspace) {
 				w.Init.Options.MinDelay.Set(50 * time.Millisecond)
 				w.Init.Options.MaxDelay.Set(time.Hour)
 				w.Init.Options.DelayFactor.Set(3)
@@ -91,7 +89,7 @@ func TestBackoff_Do(t *testing.T) {
 		tc.Copy().
 			Given("MaxDelayJitter option").
 			Then("should respect MaxDelayJitter option").
-			AddTask(9, func(w *Workspace) {
+			Step(0.5, func(t *testing.T, w *Workspace) {
 				w.Init.Options.MinDelay.Set(400 * time.Millisecond)
 				w.Init.Options.MaxDelayJitter.Set(0.25)
 				w.Init.Options.MaxNumberOfAttempts.Set(1)
@@ -102,7 +100,7 @@ func TestBackoff_Do(t *testing.T) {
 		tc.Copy().
 			Given("DelayFunc option").
 			Then("should respect DelayFunc option").
-			AddTask(9, func(w *Workspace) {
+			Step(0.5, func(t *testing.T, w *Workspace) {
 				w.Init.Options.MinDelay.Set(time.Hour)
 				w.Init.Options.MaxDelay.Set(time.Hour)
 				w.Init.Options.MaxDelayJitter.Set(0)
@@ -117,7 +115,7 @@ func TestBackoff_Do(t *testing.T) {
 		tc.Copy().
 			Given("MaxNumberOfAttempts option with negative value").
 			Then("should not limit number of attempts").
-			AddTask(9, func(w *Workspace) {
+			Step(0.5, func(t *testing.T, w *Workspace) {
 				w.Init.Options.MinDelay.Set(50 * time.Millisecond)
 				w.Init.Options.MaxDelay.Set(50 * time.Millisecond)
 				w.Init.Options.MaxDelayJitter.Set(0)

@@ -19,13 +19,11 @@ func TestOptions_Sanitize(t *testing.T) {
 		MaxNumberOfAttempts int
 	}
 	type Workspace struct {
-		testcase.WorkspaceBase
-
 		O             Options
 		ExpectedState State
 	}
 	tc := testcase.New().
-		AddTask(10, func(w *Workspace) {
+		Step(1, func(t *testing.T, w *Workspace) {
 			w.ExpectedState = State{
 				MinDelay:            DefaultMinDelay,
 				MaxDelay:            DefaultMaxDelay,
@@ -34,7 +32,7 @@ func TestOptions_Sanitize(t *testing.T) {
 				MaxNumberOfAttempts: DefaultMaxNumberOfAttempts,
 			}
 		}).
-		AddTask(20, func(w *Workspace) {
+		Step(2, func(t *testing.T, w *Workspace) {
 			w.O.Sanitize()
 			state := State{
 				MinDelay:            w.O.MinDelay.Value(),
@@ -44,7 +42,7 @@ func TestOptions_Sanitize(t *testing.T) {
 				DelayFuncIsNil:      w.O.DelayFunc == nil,
 				MaxNumberOfAttempts: w.O.MaxNumberOfAttempts.Value(),
 			}
-			assert.Equal(w.T(), w.ExpectedState, state)
+			assert.Equal(t, w.ExpectedState, state)
 		})
 	testcase.RunListParallel(t,
 		tc.Copy().
@@ -53,7 +51,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		tc.Copy().
 			Given("invalid option values").
 			Then("should set invalid option values to default").
-			AddTask(19, func(w *Workspace) {
+			Step(1.5, func(t *testing.T, w *Workspace) {
 				w.O.MinDelay.Set(-1)
 				w.O.MaxDelay.Set(-1)
 				w.O.DelayFactor.Set(-1)
@@ -61,7 +59,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		tc.Copy().
 			Given("valid option values").
 			Then("should preserve option values").
-			AddTask(19, func(w *Workspace) {
+			Step(1.5, func(t *testing.T, w *Workspace) {
 				w.O.MinDelay.Set(1 * time.Second)
 				w.ExpectedState.MinDelay = w.O.MinDelay.Value()
 				w.O.MaxDelay.Set(2 * time.Second)
@@ -76,7 +74,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		tc.Copy().
 			Given("MinDelay option value > MaxDelay option value").
 			Then("should set MinDelay/MaxDelay option values to default").
-			AddTask(19, func(w *Workspace) {
+			Step(1.5, func(t *testing.T, w *Workspace) {
 				w.O.MinDelay.Set(2 * time.Second)
 				w.O.MaxDelay.Set(1 * time.Second)
 			}),
