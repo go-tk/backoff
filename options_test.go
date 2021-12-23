@@ -19,12 +19,12 @@ func TestOptions_Sanitize(t *testing.T) {
 		MaxNumberOfAttempts int
 	}
 	type Workspace struct {
-		O             Options
-		ExpectedState State
+		O                  Options
+		ExpState, ActState State
 	}
 	tc := testcase.New().
 		Step(1, func(t *testing.T, w *Workspace) {
-			w.ExpectedState = State{
+			w.ExpState = State{
 				MinDelay:            DefaultMinDelay,
 				MaxDelay:            DefaultMaxDelay,
 				DelayFactor:         DefaultDelayFactor,
@@ -34,7 +34,7 @@ func TestOptions_Sanitize(t *testing.T) {
 		}).
 		Step(2, func(t *testing.T, w *Workspace) {
 			w.O.Sanitize()
-			state := State{
+			w.ActState = State{
 				MinDelay:            w.O.MinDelay.Value(),
 				MaxDelay:            w.O.MaxDelay.Value(),
 				DelayFactor:         w.O.DelayFactor.Value(),
@@ -42,7 +42,9 @@ func TestOptions_Sanitize(t *testing.T) {
 				DelayFuncIsNil:      w.O.DelayFunc == nil,
 				MaxNumberOfAttempts: w.O.MaxNumberOfAttempts.Value(),
 			}
-			assert.Equal(t, w.ExpectedState, state)
+		}).
+		Step(3, func(t *testing.T, w *Workspace) {
+			assert.Equal(t, w.ExpState, w.ActState)
 		})
 	testcase.RunListParallel(t,
 		tc.Copy().
@@ -61,15 +63,15 @@ func TestOptions_Sanitize(t *testing.T) {
 			Then("should preserve option values").
 			Step(1.5, func(t *testing.T, w *Workspace) {
 				w.O.MinDelay.Set(1 * time.Second)
-				w.ExpectedState.MinDelay = w.O.MinDelay.Value()
+				w.ExpState.MinDelay = w.O.MinDelay.Value()
 				w.O.MaxDelay.Set(2 * time.Second)
-				w.ExpectedState.MaxDelay = w.O.MaxDelay.Value()
+				w.ExpState.MaxDelay = w.O.MaxDelay.Value()
 				w.O.DelayFactor.Set(3)
-				w.ExpectedState.DelayFactor = w.O.DelayFactor.Value()
+				w.ExpState.DelayFactor = w.O.DelayFactor.Value()
 				w.O.MaxDelayJitter.Set(0.3)
-				w.ExpectedState.MaxDelayJitter = w.O.MaxDelayJitter.Value()
+				w.ExpState.MaxDelayJitter = w.O.MaxDelayJitter.Value()
 				w.O.MaxNumberOfAttempts.Set(0)
-				w.ExpectedState.MaxNumberOfAttempts = w.O.MaxNumberOfAttempts.Value()
+				w.ExpState.MaxNumberOfAttempts = w.O.MaxNumberOfAttempts.Value()
 			}),
 		tc.Copy().
 			Given("MinDelay option value > MaxDelay option value").

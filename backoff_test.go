@@ -12,17 +12,16 @@ import (
 )
 
 func TestBackoff_Do(t *testing.T) {
-	type Init struct {
-		Options Options
-	}
-	type Output struct {
-		Err error
-	}
 	type Workspace struct {
-		B                *Backoff
-		Init             Init
-		ExpectedOutput   Output
-		DurationInterval [2]time.Duration
+		B    *Backoff
+		Init struct {
+			Options Options
+		}
+		ExpOut, ActOut struct {
+			Err error
+		}
+		Dur      time.Duration
+		DurLimit [2]time.Duration
 	}
 	tc := testcase.New().
 		Step(1, func(t *testing.T, w *Workspace) {
@@ -37,15 +36,16 @@ func TestBackoff_Do(t *testing.T) {
 					break
 				}
 			}
-			duration := time.Since(t0)
+			w.Dur = time.Since(t0)
 			for err2 := errors.Unwrap(err); err2 != nil; err, err2 = err2, errors.Unwrap(err2) {
 			}
-			var output Output
-			output.Err = err
-			assert.Equal(t, w.ExpectedOutput, output)
-			if w.DurationInterval != [2]time.Duration{} {
-				assert.GreaterOrEqual(t, duration, w.DurationInterval[0])
-				assert.LessOrEqual(t, duration, w.DurationInterval[1])
+			w.ActOut.Err = err
+		}).
+		Step(3, func(t *testing.T, w *Workspace) {
+			assert.Equal(t, w.ExpOut, w.ActOut)
+			if w.DurLimit != [2]time.Duration{} {
+				assert.GreaterOrEqual(t, w.Dur, w.DurLimit[0])
+				assert.LessOrEqual(t, w.Dur, w.DurLimit[1])
 			}
 		})
 	testcase.RunListParallel(t,
@@ -56,9 +56,9 @@ func TestBackoff_Do(t *testing.T) {
 				w.Init.Options.MinDelay.Set(500 * time.Millisecond)
 				w.Init.Options.MaxDelayJitter.Set(0)
 				w.Init.Options.MaxNumberOfAttempts.Set(1)
-				w.ExpectedOutput.Err = ErrTooManyAttempts
-				w.DurationInterval[0] = 500 * time.Millisecond
-				w.DurationInterval[1] = (500 + 100) * time.Millisecond
+				w.ExpOut.Err = ErrTooManyAttempts
+				w.DurLimit[0] = 500 * time.Millisecond
+				w.DurLimit[1] = (500 + 100) * time.Millisecond
 			}),
 		tc.Copy().
 			Given("MaxDelay option").
@@ -69,9 +69,9 @@ func TestBackoff_Do(t *testing.T) {
 				w.Init.Options.DelayFactor.Set(100)
 				w.Init.Options.MaxDelayJitter.Set(0)
 				w.Init.Options.MaxNumberOfAttempts.Set(3)
-				w.ExpectedOutput.Err = ErrTooManyAttempts
-				w.DurationInterval[0] = 550 * time.Millisecond
-				w.DurationInterval[1] = (550 + 100) * time.Millisecond
+				w.ExpOut.Err = ErrTooManyAttempts
+				w.DurLimit[0] = 550 * time.Millisecond
+				w.DurLimit[1] = (550 + 100) * time.Millisecond
 			}),
 		tc.Copy().
 			Given("DelayFactor option").
@@ -82,9 +82,9 @@ func TestBackoff_Do(t *testing.T) {
 				w.Init.Options.DelayFactor.Set(3)
 				w.Init.Options.MaxDelayJitter.Set(0)
 				w.Init.Options.MaxNumberOfAttempts.Set(3)
-				w.ExpectedOutput.Err = ErrTooManyAttempts
-				w.DurationInterval[0] = 650 * time.Millisecond
-				w.DurationInterval[1] = (650 + 100) * time.Millisecond
+				w.ExpOut.Err = ErrTooManyAttempts
+				w.DurLimit[0] = 650 * time.Millisecond
+				w.DurLimit[1] = (650 + 100) * time.Millisecond
 			}),
 		tc.Copy().
 			Given("MaxDelayJitter option").
@@ -93,9 +93,9 @@ func TestBackoff_Do(t *testing.T) {
 				w.Init.Options.MinDelay.Set(400 * time.Millisecond)
 				w.Init.Options.MaxDelayJitter.Set(0.25)
 				w.Init.Options.MaxNumberOfAttempts.Set(1)
-				w.ExpectedOutput.Err = ErrTooManyAttempts
-				w.DurationInterval[0] = 300 * time.Millisecond
-				w.DurationInterval[1] = (500 + 100) * time.Millisecond
+				w.ExpOut.Err = ErrTooManyAttempts
+				w.DurLimit[0] = 300 * time.Millisecond
+				w.DurLimit[1] = (500 + 100) * time.Millisecond
 			}),
 		tc.Copy().
 			Given("DelayFunc option").
@@ -108,9 +108,9 @@ func TestBackoff_Do(t *testing.T) {
 				_ = cancel
 				w.Init.Options.DelayFunc = DelayWithContext(ctx)
 				w.Init.Options.MaxNumberOfAttempts.Set(1)
-				w.ExpectedOutput.Err = context.DeadlineExceeded
-				w.DurationInterval[0] = 300 * time.Millisecond
-				w.DurationInterval[1] = (300 + 100) * time.Millisecond
+				w.ExpOut.Err = context.DeadlineExceeded
+				w.DurLimit[0] = 300 * time.Millisecond
+				w.DurLimit[1] = (300 + 100) * time.Millisecond
 			}),
 		tc.Copy().
 			Given("MaxNumberOfAttempts option with negative value").
@@ -123,9 +123,9 @@ func TestBackoff_Do(t *testing.T) {
 				_ = cancel
 				w.Init.Options.DelayFunc = DelayWithContext(ctx)
 				w.Init.Options.MaxNumberOfAttempts.Set(-1)
-				w.ExpectedOutput.Err = context.DeadlineExceeded
-				w.DurationInterval[0] = 500 * time.Millisecond
-				w.DurationInterval[1] = (500 + 100) * time.Millisecond
+				w.ExpOut.Err = context.DeadlineExceeded
+				w.DurLimit[0] = 500 * time.Millisecond
+				w.DurLimit[1] = (500 + 100) * time.Millisecond
 			}),
 	)
 }
