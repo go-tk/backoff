@@ -45,6 +45,43 @@ type Options struct {
 	MaxNumberOfAttempts optional.Int
 }
 
+func (o *Options) apply(to *Backoff) {
+	if v, ok := o.MinDelay.Get(); ok && v > 0 {
+		to.minDelay = v
+	} else {
+		to.minDelay = defaultMinDelay
+	}
+	if v, ok := o.MaxDelay.Get(); ok && v > 0 {
+		to.maxDelay = v
+	} else {
+		to.maxDelay = defaultMaxDelay
+	}
+	if to.minDelay > to.maxDelay {
+		to.minDelay = defaultMinDelay
+		to.maxDelay = defaultMaxDelay
+	}
+	if v, ok := o.DelayFactor.Get(); ok && v >= 1 {
+		to.delayFactor = v
+	} else {
+		to.delayFactor = defaultDelayFactor
+	}
+	if v, ok := o.MaxDelayJitter.Get(); ok {
+		to.maxDelayJitter = v
+	} else {
+		to.maxDelayJitter = defaultMaxDelayJitter
+	}
+	if o.DelayFunc == nil {
+		to.delayFunc = defaultDelayFunc
+	} else {
+		to.delayFunc = o.DelayFunc
+	}
+	if v, ok := o.MaxNumberOfAttempts.Get(); ok {
+		to.maxNumberOfAttempts = v
+	} else {
+		to.maxNumberOfAttempts = defaultMaxNumberOfAttempts
+	}
+}
+
 const (
 	defaultMinDelay            = 100 * time.Millisecond
 	defaultMaxDelay            = 100 * time.Second
@@ -53,32 +90,9 @@ const (
 	defaultMaxNumberOfAttempts = 100
 )
 
-func (o *Options) sanitize() {
-	if o.MinDelay.Value() <= 0 {
-		o.MinDelay.Set(defaultMinDelay)
-	}
-	if o.MaxDelay.Value() <= 0 {
-		o.MaxDelay.Set(defaultMaxDelay)
-	}
-	if o.MinDelay.Value() > o.MaxDelay.Value() {
-		o.MinDelay.Set(defaultMinDelay)
-		o.MaxDelay.Set(defaultMaxDelay)
-	}
-	if o.DelayFactor.Value() < 1 {
-		o.DelayFactor.Set(defaultDelayFactor)
-	}
-	if !o.MaxDelayJitter.HasValue() {
-		o.MaxDelayJitter.Set(defaultMaxDelayJitter)
-	}
-	if o.DelayFunc == nil {
-		o.DelayFunc = func(timedOut <-chan struct{}) error {
-			<-timedOut
-			return nil
-		}
-	}
-	if !o.MaxNumberOfAttempts.HasValue() {
-		o.MaxNumberOfAttempts.Set(defaultMaxNumberOfAttempts)
-	}
+func defaultDelayFunc(timedOut <-chan struct{}) error {
+	<-timedOut
+	return nil
 }
 
 // DelayFunc is the type of the function blocking until the timed-out event happens.

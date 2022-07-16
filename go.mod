@@ -3,7 +3,7 @@ module github.com/go-tk/backoff
 go 1.17
 
 require (
-	github.com/go-tk/optional v0.1.2
+	github.com/go-tk/optional v0.2.0
 	github.com/go-tk/testcase v0.6.2
 	github.com/stretchr/testify v1.7.0
 )
