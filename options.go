@@ -31,6 +31,7 @@ type Options struct {
 
 	// Default value is 1.
 	// Value <= 0 means no delay jitter.
+	// Value > 1 is equivalent to 1.
 	MaxDelayJitter optional.Float64
 
 	// Default value is:
@@ -66,6 +67,9 @@ func (o *Options) apply(to *Backoff) {
 		to.delayFactor = defaultDelayFactor
 	}
 	if v, ok := o.MaxDelayJitter.Get(); ok {
+		if v > 1 {
+			v = 1
+		}
 		to.maxDelayJitter = v
 	} else {
 		to.maxDelayJitter = defaultMaxDelayJitter

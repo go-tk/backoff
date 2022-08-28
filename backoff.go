@@ -4,10 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/benbjohnson/clock"
 )
 
 // Backoff represents an instance of the exponential backoff algorithm.
 type Backoff struct {
+	clock clock.Clock
+
 	minDelay            time.Duration
 	maxDelay            time.Duration
 	delayFactor         float64
@@ -22,8 +26,11 @@ type Backoff struct {
 
 // New creates an instance of the exponential backoff algorithm with the
 // given options.
-func New(options Options) *Backoff {
+func New(options Options) *Backoff { return doNew(clock.New(), options) }
+
+func doNew(clock clock.Clock, options Options) *Backoff {
 	var b Backoff
+	b.clock = clock
 	options.apply(&b)
 	return &b
 }
@@ -35,7 +42,7 @@ func (b *Backoff) Do() error {
 	if b.maxNumberOfAttempts >= 0 && attemptCount >= b.maxNumberOfAttempts {
 		return fmt.Errorf("%w; maxNumberOfAttempts=%v", ErrTooManyAttempts, b.maxNumberOfAttempts)
 	}
-	delay := b.delay.Update(b.minDelay, b.maxDelay, b.delayFactor, b.maxDelayJitter)
+	delay := b.delay.Update(b.minDelay, b.maxDelay, b.delayFactor, b.maxDelayJitter, b.clock)
 	timedOut := b.timer.Start(delay)
 	defer b.timer.Stop()
 	if err := b.delayFunc(timedOut); err != nil {

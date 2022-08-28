@@ -3,8 +3,9 @@ module github.com/go-tk/backoff
 go 1.17
 
 require (
+	github.com/benbjohnson/clock v1.3.0
 	github.com/go-tk/optional v0.2.0
-	github.com/go-tk/testcase v0.6.2
+	github.com/go-tk/testcase v0.7.1
 	github.com/stretchr/testify v1.7.0
 )
 

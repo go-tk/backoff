@@ -1,6 +1,7 @@
 package backoff_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,66 +10,87 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOptions_apply(t *testing.T) {
-	type Workspace struct {
-		O            Options
-		B            Backoff
-		ExpSt, ActSt string
+func TestOptions_Apply(t *testing.T) {
+	type C struct {
+		options      *Options
+		expectedStat string
 	}
-	tc := testcase.New().
-		Step(0, func(t *testing.T, w *Workspace) {
-			w.ExpSt = `
+	tc := testcase.New(func(t *testing.T, c *C) {
+		var options Options
+		c.options = &options
+
+		testcase.DoCallback(0, t, c)
+
+		var b Backoff
+		options.Apply(&b)
+		assert.Equal(t, c.expectedStat, b.DumpAsString())
+	})
+
+	// default option values
+	tc.Copy().SetCallback(0, func(t *testing.T, c *C) {
+		c.expectedStat = `
 minDelay: 100ms
 maxDelay: 1m40s
 delayFactor: 2
 maxDelayJitter: 1
+delayFuncIsNil: false
 maxNumberOfAttempts: 100
+attemptCount: 0
+delay: 0s
 `[1:]
-		}).
-		Step(1, func(t *testing.T, w *Workspace) {
-			w.O.Apply(&w.B)
-			w.ActSt = w.B.DumpSettings()
-		}).
-		Step(2, func(t *testing.T, w *Workspace) {
-			assert.Equal(t, w.ExpSt, w.ActSt)
-		})
-	testcase.RunListParallel(t,
-		tc.Copy().
-			Given("no option values").
-			Then("settings should use default values"),
-		tc.Copy().
-			Given("invalid option values").
-			Then("settings should use default values").
-			Step(0.5, func(t *testing.T, w *Workspace) {
-				w.O.MinDelay.Set(-1)
-				w.O.MaxDelay.Set(-1)
-				w.O.DelayFactor.Set(-1)
-			}),
-		tc.Copy().
-			Given("valid option values").
-			Then("settings should use these values").
-			Step(0.5, func(t *testing.T, w *Workspace) {
-				w.O.MinDelay.Set(1 * time.Second)
-				w.O.MaxDelay.Set(2 * time.Second)
-				w.O.DelayFactor.Set(3)
-				w.O.MaxDelayJitter.Set(0.3)
-				w.O.MaxNumberOfAttempts.Set(0)
-			}).
-			Step(1.5, func(t *testing.T, w *Workspace) {
-				w.ExpSt = `
+	}).Run(t)
+
+	// invalid option values (1)
+	tc.Copy().SetCallback(0, func(t *testing.T, c *C) {
+		c.options.MinDelay.Set(-1 * time.Second)
+		c.options.MaxDelay.Set(-1 * time.Second)
+		c.options.DelayFactor.Set(0.5)
+		c.options.MaxDelayJitter.Set(1.1)
+		c.expectedStat = `
+minDelay: 100ms
+maxDelay: 1m40s
+delayFactor: 2
+maxDelayJitter: 1
+delayFuncIsNil: false
+maxNumberOfAttempts: 100
+attemptCount: 0
+delay: 0s
+`[1:]
+	}).Run(t)
+
+	// invalid option values (2)
+	tc.Copy().SetCallback(0, func(t *testing.T, c *C) {
+		c.options.MinDelay.Set(2 * time.Second)
+		c.options.MaxDelay.Set(1 * time.Second)
+		c.expectedStat = `
+minDelay: 100ms
+maxDelay: 1m40s
+delayFactor: 2
+maxDelayJitter: 1
+delayFuncIsNil: false
+maxNumberOfAttempts: 100
+attemptCount: 0
+delay: 0s
+`[1:]
+	}).Run(t)
+
+	// valid option values
+	tc.Copy().SetCallback(0, func(t *testing.T, c *C) {
+		c.options.MinDelay.Set(1 * time.Second)
+		c.options.MaxDelay.Set(2 * time.Second)
+		c.options.DelayFactor.Set(1.5)
+		c.options.MaxDelayJitter.Set(0.8)
+		c.options.DelayFunc = DelayWithContext(context.Background())
+		c.options.MaxNumberOfAttempts.Set(10)
+		c.expectedStat = `
 minDelay: 1s
 maxDelay: 2s
-delayFactor: 3
-maxDelayJitter: 0.3
-maxNumberOfAttempts: 0
+delayFactor: 1.5
+maxDelayJitter: 0.8
+delayFuncIsNil: false
+maxNumberOfAttempts: 10
+attemptCount: 0
+delay: 0s
 `[1:]
-			}),
-		tc.Copy().
-			Given("MinDelay option value > MaxDelay option value").
-			Then("settings should use default values").
-			Step(0.5, func(t *testing.T, w *Workspace) {
-				w.O.MinDelay.Set(2 * time.Second)
-				w.O.MaxDelay.Set(1 * time.Second)
-			}),
-	)
+	}).Run(t)
 }
